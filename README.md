@@ -117,7 +117,7 @@ ftriage/
 
 - **Prefetch** requiere PECmd (o Windows); si no, el `.pf` se adquiere pero no se interpreta.
 - **Shimcache** cubre Windows 10/11 y 7.
-- La adquisición de ficheros bloqueados / dispositivos requiere **admin/root** (y write-blocker en casos reales).
+- La adquisición de ficheros bloqueados / dispositivos requiere **admin/root** y write-blocker.
 - **iOS**: un iPhone no ejecuta un colector propio; la vía viable es parsear un backup de Finder/iTunes (previsto como módulo aparte).
 - El parseo de imágenes E01 requiere `libewf`; sin él, imaging cae a RAW.
 
