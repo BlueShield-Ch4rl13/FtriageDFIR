@@ -1,4 +1,4 @@
-# 🔍 ftriage — Plataforma de triage forense y adquisición (DFIR)
+# 🔍 Ftriage — Plataforma de triage forense y adquisición (DFIR)
 
 Recolector y analizador de artefactos forenses **multiplataforma** (Windows, Linux y macOS) para respuesta a incidentes, con **adquisición de imágenes de disco** para Autopsy/X-Ways/FTK. Para cada caso genera un **informe HTML navegable** con super-timeline unificada, salidas **JSON/NDJSON** para SIEM, **IOCs** extraídos automáticamente y una **cadena de custodia** con MD5 + SHA-256 por artefacto.
 
@@ -33,7 +33,7 @@ Copia cruda **siempre**; parseo con el mejor motor disponible. En Windows, event
 ## Instalación
 
 ```bash
-git clone https://github.com/BlueShield-Ch4rl13/ftriage
+git clone https://github.com/BlueShield-Ch4rl13/FtriajeDFIR/ftriage
 cd ftriage
 pip install -r requirements.txt
 ```
@@ -44,17 +44,17 @@ Opcional: [EZ Tools](https://ericzimmerman.github.io/) (prefetch) y `libewf`/`ew
 
 ```bash
 # Detecta el SO del propio equipo (ejecutar como administrador/root)
-python triage.py triage --case IR-2026-014 --examiner "C. Villalba"
+python triage.py triage --case IR-fecha --examiner "Nombre del analista"
 
 # Forzar el SO objetivo (p. ej. imagen Windows montada, analizada desde Linux)
-python triage.py triage --target-os windows --root /mnt/imagen --case IR-2026-014
+python triage.py triage --target-os windows --root /mnt/imagen --case IR-fecha
 
 # Triage de un equipo Linux o macOS
-sudo python triage.py triage --target-os linux --case IR-2026-014
-sudo python triage.py triage --target-os macos --case IR-2026-014
+sudo python triage.py triage --target-os linux --case IR-fecha
+sudo python triage.py triage --target-os macos --case IR-fecha
 
 # Adquisición Windows con instantánea de volumen
-python triage.py triage --vss --case IR-2026-014
+python triage.py triage --vss --case IR-fecha
 
 # Reanalizar una carpeta ya recolectada, sin volver a copiar
 python triage.py triage --parse-only ./triage_HOST_20260714
@@ -62,14 +62,14 @@ python triage.py triage --parse-only ./triage_HOST_20260714
 
 Flags útiles: `--artifacts` (subconjunto de categorías, dependen del SO), `--collect-only`, `--no-iocs`, `--ez-tools RUTA`, `-v`.
 
-## Uso — imaging
+## Uso — img
 
 ```bash
 # Imagen RAW de un disco, dividida en segmentos de 2 GB, con verificación
-sudo python triage.py image --source /dev/sdb --output ./caso --case IR-2026-014 --split 2G
+sudo python triage.py image --source /dev/sdb --output ./caso --case IR-fecha --split 2G
 
 # Imagen E01 (requiere libewf/ewfacquire); si no está, cae a RAW
-sudo python triage.py image --source /dev/sdb --output ./caso --format e01 --case IR-2026-014
+sudo python triage.py image --source /dev/sdb --output ./caso --format e01 --case IR-fecha
 ```
 
 La imagen se acompaña de un `.info.txt`/`.info.json` estilo dc3dd/Guymager con MD5+SHA256, tamaño, duración y **resultado de verificación** (relee la imagen y compara con el origen). Directamente cargable en Autopsy como "Disk Image". La fuente se abre en solo lectura; **en un caso real, usa siempre un write-blocker hardware**.
