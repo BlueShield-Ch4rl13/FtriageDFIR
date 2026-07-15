@@ -33,7 +33,7 @@ Copia cruda **siempre**; parseo con el mejor motor disponible. En Windows, event
 ## Instalación
 
 ```bash
-git clone https://github.com/BlueShield-Ch4rl13/FtriajeDFIR/ftriage
+git clone https://github.com/BlueShield-Ch4rl13/FtriageDFIR/ftriage
 cd ftriage
 pip install -r requirements.txt
 ```
