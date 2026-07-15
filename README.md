@@ -2,6 +2,8 @@
 
 Recolector y analizador de artefactos forenses **multiplataforma** (Windows, Linux y macOS) para respuesta a incidentes, con **adquisición de imágenes de disco** para Autopsy/X-Ways/FTK. Para cada caso genera un **informe HTML navegable** con super-timeline unificada, salidas **JSON/NDJSON** para SIEM, **IOCs** extraídos automáticamente y una **cadena de custodia** con MD5 + SHA-256 por artefacto.
 
+🌐 Dashboard en vivo: https://dfir.carlosvillalbalagos.com
+
 > ⚠️ **Uso exclusivamente defensivo** (respuesta a incidentes sobre sistemas propios o autorizados). TLP:CLEAR, IOCs defangueados.
 
 ## Capacidades
