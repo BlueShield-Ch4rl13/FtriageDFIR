@@ -103,14 +103,6 @@ ftriage/
 └── utils.py           # hashing, timestamps (7 epochs), copia, parsers compartidos
 ```
 
-## Notas de diseño (para entrevista)
-
-- **Una super-timeline por encima de todo.** Reunir cinco (o siete) artefactos en un solo eje es como empieza de verdad un análisis DFIR; ver "servicio instalado → accesos fallidos → log borrado" en una tabla vale más que cinco herramientas.
-- **La copia cruda es la evidencia; el parseo, una conveniencia.** Todo se adquiere con hash antes de interpretarse, reproducible con otras herramientas.
-- **Siete epochs normalizados a UTC**: FILETIME (1601), WebKit, PRTime, CFAbsoluteTime (2001), Unix, syslog y journald — para que la timeline sea coherente entre SO.
-- **Verificación de imagen**: releer y comparar hashes demuestra copia bit a bit, no solo "se copió".
-- **Motor de informe agnóstico al SO**: los tres sistemas comparten la misma capa de timeline/HTML/JSON; cada plataforma solo aporta sus artefactos y hallazgos.
-
 ## Limitaciones
 
 - **Prefetch** requiere PECmd (o Windows); si no, el `.pf` se adquiere pero no se interpreta.
