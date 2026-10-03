@@ -175,6 +175,8 @@ function h(html){const d=document.createElement("div");d.innerHTML=html;return d
 function safeColor(c){return (typeof c==="string"&&/^#[0-9a-fA-F]{3,8}$/.test(c))?c:"#8B97A5";}
 function safeAttack(a){return (typeof a==="string"&&/^T\d{4}(\.\d{3})?$/.test(a))?a:"";}
 function num(n){n=Number(n);return isFinite(n)?Math.max(0,Math.min(100,n)):0;}
+// entero no acotado para contadores: coerciona y nunca deja pasar HTML
+function ent(n){n=Number(n);return Number.isFinite(n)?Math.trunc(n):0;}
 
 let CURRENT=null;
 
@@ -218,16 +220,16 @@ function heroHTML(rep,a,host,integ){
         <div><div class="k">Equipo</div><div class="v">${esc(host.hostname||"?")} &middot; ${esc(host.os||"")}</div></div>
         <div><div class="k">Analista</div><div class="v">${esc((rep.case||{}).examiner||"&mdash;")}</div></div>
         <div><div class="k">Generado</div><div class="v">${fmtTs(rep.generated_utc)}</div></div>
-        <div><div class="k">Integridad</div><div class="v">${integ.artifacts_hashed||0}/${integ.artifacts_total||0} con hash</div></div>
-        <div><div class="k">Confianza (${esc(a.confidence_tier||"?")})</div><div class="conf-bar"><span style="width:${a.confidence||0}%"></span></div></div>
+        <div><div class="k">Integridad</div><div class="v">${ent(integ.artifacts_hashed)}/${ent(integ.artifacts_total)} con hash</div></div>
+        <div><div class="k">Confianza (${esc(a.confidence_tier||"?")})</div><div class="conf-bar"><span style="width:${num(a.confidence)}%"></span></div></div>
       </div>
     </div></div>`;
 }
 function reasonsHTML(a){
   const rs=(a.reasons||[]);
   const body = rs.length ? rs.map(r=>`<div class="reason"><span class="att">${esc(r.attack)}</span>
-     <span class="txt">${esc(r.label)} <span class="muted">&times;${r.count}</span></span>
-     <span class="pts">+${r.points}</span></div>`).join("")
+     <span class="txt">${esc(r.label)} <span class="muted">&times;${ent(r.count)}</span></span>
+     <span class="pts">+${ent(r.points)}</span></div>`).join("")
     : `<div class="muted">Sin indicadores de riesgo detectados.</div>`;
   return `<div class="card"><h3>&iquest;Por qu&eacute;? &mdash; evidencias que suman al riesgo</h3>${body}</div>`;
 }
@@ -317,7 +319,7 @@ function drawArt(k){
 function buildIocs(iocs){
   const ext=iocs.filter(i=>!i.private).length;
   const rows=iocs.map(i=>`<tr><td class="m">${esc(i.type)}</td><td class="m wrap">${esc(i.defanged||i.value)}</td>
-     <td class="m">${i.count||1}</td><td>${i.private?'<span class="badge">interno</span>':'<span class="badge ext">externo</span>'}</td>
+     <td class="m">${ent(i.count)||1}</td><td>${i.private?'<span class="badge">interno</span>':'<span class="badge ext">externo</span>'}</td>
      <td class="muted m">${esc((i.sources||[]).join(", "))}</td></tr>`).join("");
   document.getElementById("p-ioc").innerHTML=
     `<div class="muted" style="margin-bottom:10px">${iocs.length} indicador(es) &middot; ${ext} externo(s). Formato compatible con el pipeline de News CTI.</div>

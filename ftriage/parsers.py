@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import csv
 import logging
-import os
 import shutil
 import sqlite3
 import struct

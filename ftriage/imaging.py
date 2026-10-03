@@ -16,7 +16,6 @@ escribe sobre ella, pero eso no sustituye a un write-blocker en un caso real.
 """
 from __future__ import annotations
 
-import ctypes
 try:
     import fcntl  # solo disponible en sistemas Unix
 except ImportError:  # Windows
@@ -28,7 +27,6 @@ import shutil
 import struct
 import subprocess
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 from . import utils

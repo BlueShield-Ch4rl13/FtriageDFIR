@@ -17,7 +17,6 @@ from __future__ import annotations
 import html
 import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 from . import utils
@@ -225,8 +224,6 @@ def write_html(out_dir: Path, case: dict, manifest: list[dict],
                tl_limit: int = 1500, tbl_limit: int = 800) -> Path:
     host = utils.host_info()
     verified = sum(1 for m in manifest if m.get("sha256"))
-    counts = {k: len(parsed.get(k, [])) for k in
-              ("eventlogs", "prefetch", "amcache", "shimcache", "browsers")}
 
     # -- Timeline (hero) --
     tl_rows, tl_cls = [], []
@@ -363,6 +360,7 @@ def write_html(out_dir: Path, case: dict, manifest: list[dict],
         examiner=_esc(case.get("examiner", "—")),
         generated=_fmt_ts(utils.now_utc()),
         hostname=_esc(host["hostname"]), os=_esc(host["os"]),
+        os_triado=_esc(case.get("os", "—")),
         integrity=f"{verified}/{len(manifest)}",
         tl_total=len(timeline), tl_shown=min(len(timeline), tl_limit),
         findings=findings_html, cards=cards, errors=errors_html,
@@ -499,7 +497,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 <header>
   <div class="brand">
     <h1>Informe de triage forense</h1>
-    <span class="badge">DFIR · Windows</span>
+    <span class="badge">DFIR &middot; {os_triado}</span>
   </div>
   <div class="meta">
     <span>Caso: <b>{case}</b></span>
