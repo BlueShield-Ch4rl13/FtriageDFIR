@@ -87,6 +87,7 @@ class Collector:
             found += [cfg / h for h in ("SYSTEM", "SOFTWARE", "SAM", "SECURITY")]
             for prof in self._user_profiles():
                 found.append(prof / "NTUSER.DAT")
+                found.append(prof / "AppData" / "Local" / "Microsoft" / "Windows" / "UsrClass.dat")
 
         elif category == "browsers":
             for prof in self._user_profiles():
@@ -125,46 +126,28 @@ class Collector:
                  ok, len(self.manifest))
         return self.manifest
 
-    def _collect_one(self, category: str, src: Path, dest_dir: Path) -> None:
-        # Los navegadores repiten el nombre "History" entre perfiles: se
-        # prefija con el usuario para no pisar copias.
-        rename = None
-        if category == "browsers":
-            try:
-                user = src.relative_to(self.root / "Users").parts[0]
-            except ValueError:
-                user = "unknown"
-            rename = f"{user}_{src.parent.name}_{src.name}"
+    def _nombre_destino(self, category: str, src: Path) -> str | None:
+        """Nombre en la carpeta del caso para lo que se repite entre perfiles.
 
-        entry: dict = {
-            "category": category,
-            "source": str(src),
-            "collected_utc": utils.now_utc(),
-            "status": "ok",
-        }
+        Antes solo los navegadores llevaban el usuario en el nombre: los
+        NTUSER.DAT de todos los usuarios se copiaban como "NTUSER.DAT" y solo
+        sobrevivía el último, con un manifiesto que listaba copias que ya no
+        existían.
+        """
         try:
-            success, method = utils.copy_artifact(src, dest_dir, self.shadow)
-            dest = dest_dir / src.name
-            if success and rename:
-                target = dest_dir / rename
-                dest.replace(target)
-                dest = target
-            if success:
-                entry["artifact"] = str(dest.relative_to(self.artifacts_dir.parent))
-                entry["method"] = method
-                entry["size"] = dest.stat().st_size
-                digests = utils.hash_file(dest, ("md5", "sha256"))
-                entry["md5"] = digests["md5"]
-                entry["sha256"] = digests["sha256"]
-            else:
-                entry["status"] = "failed"
-                entry["error"] = "no se pudo copiar (¿bloqueado? prueba --vss como administrador)"
-                log.warning("No se pudo copiar %s", src)
-        except Exception as exc:  # ningún artefacto debe tumbar la recolección
-            entry["status"] = "error"
-            entry["error"] = f"{type(exc).__name__}: {exc}"
-            log.warning("Error copiando %s: %s", src, exc)
-        self.manifest.append(entry)
+            user = src.relative_to(self.root / "Users").parts[0]
+        except ValueError:
+            return None
+        if category == "browsers":
+            return f"{user}_{src.parent.name}_{src.name}"
+        return f"{user}_{src.name}"
+
+    def _collect_one(self, category: str, src: Path, dest_dir: Path) -> None:
+        nombre = self._nombre_destino(category, src)
+        for ruta, rn in utils.con_companeros([(src, nombre)]):
+            entry = utils.copy_and_record(category, ruta, dest_dir, self.manifest, rn, self.shadow)
+            if entry["status"] != "ok":
+                log.warning("No se pudo copiar %s: %s", ruta, entry.get("error", ""))
 
 
 def collect_all(root: Path, out_dir: Path, categories: list[str],

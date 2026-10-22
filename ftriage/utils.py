@@ -145,34 +145,83 @@ def _robocopy(src: Path, dst_dir: Path) -> bool:
         return False
 
 
-def copy_artifact(src: Path, dst_dir: Path, shadow: "ShadowCopy | None" = None) -> tuple[bool, str]:
+def copy_artifact(src: Path, dst_dir: Path, shadow: "ShadowCopy | None" = None,
+                  dest_name: str | None = None) -> tuple[bool, str]:
     """Copia un artefacto aplicando una escalera de métodos y devuelve
     (éxito, método_usado) para registrarlo en la cadena de custodia.
 
     Orden: si hay una instantánea VSS activa se copia desde ahí (consistente y
     sin bloqueos); si no, copia directa; y si el fichero está bloqueado, se
     reintenta en modo backup con robocopy.
+
+    `dest_name` copia directamente con el nombre final. Antes se copiaba con el
+    nombre original y se renombraba después: dos NTUSER.DAT seguidos usaban el
+    mismo fichero intermedio.
     """
     dst_dir.mkdir(parents=True, exist_ok=True)
+    destino = dst_dir / (dest_name or src.name)
     # 1) Instantánea de volumen (la vía forense "limpia", opt-in con --vss)
     if shadow is not None:
         shadow_src = shadow.translate(src)
         if shadow_src is not None:
             try:
-                shutil.copy2(shadow_src, dst_dir / src.name)
+                shutil.copy2(shadow_src, destino)
                 return True, "vss"
             except OSError as exc:
                 log.debug("Copia VSS falló para %s: %s", src, exc)
     # 2) Copia directa (suficiente para prefetch y ficheros no bloqueados)
     try:
-        shutil.copy2(src, dst_dir / src.name)
+        shutil.copy2(src, destino)
         return True, "direct"
     except (PermissionError, OSError) as exc:
         log.debug("Copia directa falló para %s (%s); intento modo backup", src, exc)
-    # 3) Modo backup (robocopy /b) para ficheros bloqueados por el sistema
+    # 3) Modo backup (robocopy /b) para ficheros bloqueados por el sistema.
+    #    robocopy copia con el nombre original: se renombra después.
     if IS_WINDOWS and _robocopy(src, dst_dir):
+        if dest_name and dest_name != src.name:
+            (dst_dir / src.name).replace(destino)
         return True, "robocopy_backup"
     return False, "failed"
+
+
+# Ficheros que acompañan a un artefacto y sin los que la copia está incompleta:
+#  - SQLite en modo WAL: lo último que hizo el navegador puede estar solo en -wal
+#  - colmenas del registro: los cambios pendientes están en .LOG1/.LOG2
+SUFIJOS_SQLITE = ("-wal", "-journal")
+SUFIJOS_COLMENA = (".LOG1", ".LOG2")
+COLMENAS = {"SYSTEM", "SOFTWARE", "SAM", "SECURITY", "NTUSER.DAT", "USRCLASS.DAT", "AMCACHE.HVE"}
+
+
+def con_companeros(fuentes: list[tuple[Path, "str | None"]]) -> list[tuple[Path, "str | None"]]:
+    """Añade a la lista los -wal/-journal de SQLite y los .LOG1/.LOG2 de las
+    colmenas que existan, con el mismo prefijo de nombre que su fichero."""
+    salida = []
+    for ruta, nombre in fuentes:
+        salida.append((ruta, nombre))
+        base = nombre or ruta.name
+        n = ruta.name.upper()
+        if n in COLMENAS:
+            sufijos = SUFIJOS_COLMENA
+        elif n in ("HISTORY", "HISTORY.DB", "QUARANTINEEVENTSV2") or n.endswith((".SQLITE", ".DB")):
+            sufijos = SUFIJOS_SQLITE
+        else:
+            continue
+        for suf in sufijos:
+            comp = ruta.with_name(ruta.name + suf)
+            if comp.exists():
+                salida.append((comp, base + suf))
+    return salida
+
+
+def nombre_libre(dest_dir: Path, nombre: str) -> str:
+    """Un nombre que no pise nada ya copiado: "x.plist", "x__2.plist"..."""
+    if not (dest_dir / nombre).exists():
+        return nombre
+    p = Path(nombre)
+    n = 2
+    while (dest_dir / f"{p.stem}__{n}{p.suffix}").exists():
+        n += 1
+    return f"{p.stem}__{n}{p.suffix}"
 
 
 class ShadowCopy:
@@ -421,25 +470,38 @@ def hash_file(path: Path, algos=("md5", "sha256"), chunk: int = 1 << 20) -> dict
 
 def copy_and_record(category: str, src: Path, dest_dir: Path, manifest: list,
                     rename: str | None = None, shadow=None) -> dict:
-    """Copia un artefacto, lo hashea (MD5+SHA256) y añade su entrada al manifiesto."""
+    """Copia un artefacto y deja su entrada en la cadena de custodia.
+
+    Se hashea el ORIGEN antes de copiar y la COPIA después, y se anota si
+    coinciden ("verified"). Antes solo se hasheaba la copia, así que el
+    manifiesto no demostraba que la copia fuese igual al original. En un
+    sistema vivo un registro puede cambiar entre las dos lecturas: entonces
+    "verified" es False y se dice, en vez de dar por buena una copia que no lo es.
+    """
     entry = {"category": category, "source": str(src),
              "collected_utc": now_utc(), "status": "ok"}
     try:
-        ok, method = copy_artifact(src, dest_dir, shadow)
-        dest = dest_dir / src.name
-        if ok and rename:
-            target = dest_dir / rename
-            dest.replace(target)
-            dest = target
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        nombre = nombre_libre(dest_dir, rename or src.name)
+        origen = shadow.translate(src) if shadow is not None else None
+        antes = hash_file(origen or src, ("sha256",)).get("sha256")
+        ok, method = copy_artifact(src, dest_dir, shadow, dest_name=nombre)
+        dest = dest_dir / nombre
         if ok:
             entry["artifact"] = str(dest.relative_to(dest_dir.parent.parent))
             entry["method"] = method
             entry["size"] = dest.stat().st_size
             d = hash_file(dest, ("md5", "sha256"))
             entry["md5"], entry["sha256"] = d["md5"], d["sha256"]
+            entry["source_sha256"] = antes
+            entry["verified"] = bool(antes) and antes == d["sha256"]
+            if antes and not entry["verified"]:
+                entry["note"] = "el original cambió durante la copia (sistema vivo)"
+            elif not antes:
+                entry["note"] = "no se pudo leer el original para hashearlo (bloqueado): copia sin verificar"
         else:
             entry["status"] = "failed"
-            entry["error"] = "no se pudo copiar (¿permisos? ejecuta como root)"
+            entry["error"] = "no se pudo copiar (¿permisos? ejecuta como root/administrador, o --vss)"
     except Exception as exc:
         entry["status"] = "error"
         entry["error"] = f"{type(exc).__name__}: {exc}"

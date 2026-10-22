@@ -28,6 +28,8 @@ log = logging.getLogger("ftriage")
 LABEL = "Linux"
 CATEGORIES = ["logins", "logs", "journal", "shell", "persistence", "accounts", "browsers"]
 
+LASTLOG_MAX = 64 * 1024 * 1024   # tamaño aparente máximo de lastlog que se copia
+
 # Patrones que delatan una shell inversa o ejecución sospechosa en el historial
 SUSPICIOUS_CMD = re.compile(
     r"(nc(?:\.traditional)?\s+.*-e|/dev/tcp/|bash\s+-i|python.*socket|"
@@ -54,7 +56,16 @@ def _enumerate(root: Path, cat: str) -> list[tuple[Path, str | None]]:
 
     if cat == "logins":
         base = r / "var" / "log"
-        out += [(base / n, None) for n in ("wtmp", "btmp", "lastlog")]
+        out += [(base / n, None) for n in ("wtmp", "btmp")]
+        # lastlog es un fichero disperso indexado por UID: con UIDs altos (LDAP,
+        # AD) aparenta cientos de GB aunque ocupe KB, y la copia los escribe
+        # enteros. Solo se copia si su tamaño aparente es razonable.
+        lastlog = base / "lastlog"
+        if lastlog.exists() and lastlog.stat().st_size <= LASTLOG_MAX:
+            out.append((lastlog, None))
+        elif lastlog.exists():
+            log.warning("[logins] lastlog omitido: aparenta %s (fichero disperso); "
+                        "wtmp ya tiene los inicios de sesión", utils.human_size(lastlog.stat().st_size))
 
     elif cat == "logs":
         base = r / "var" / "log"
@@ -109,7 +120,7 @@ def _enumerate(root: Path, cat: str) -> list[tuple[Path, str | None]]:
                 for places in ff.glob("*/places.sqlite"):
                     out.append((places, f"{home.name}_{places.parent.name}_places.sqlite"))
 
-    return [(p, rn) for p, rn in out if p.exists()]
+    return utils.con_companeros([(p, rn) for p, rn in out if p.exists()])
 
 
 def _collect_journal(root: Path, dest_dir: Path, manifest: list) -> None:

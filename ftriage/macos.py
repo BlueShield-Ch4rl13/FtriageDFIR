@@ -52,14 +52,16 @@ def _enumerate(root: Path, cat: str) -> list[tuple[Path, str | None]]:
     out: list[tuple[Path, str | None]] = []
 
     if cat == "persistence":
+        # Prefijo con la carpeta: el mismo .plist puede estar en LaunchDaemons
+        # y en LaunchAgents, y antes la segunda copia pisaba a la primera.
         for d in ("Library/LaunchDaemons", "Library/LaunchAgents"):
             p = r / d
             if p.is_dir():
-                out += [(f, None) for f in sorted(p.glob("*.plist"))]
+                out += [(f, f"{p.name}_{f.name}") for f in sorted(p.glob("*.plist"))]
         for user in _users(r):
             la = user / "Library" / "LaunchAgents"
             if la.is_dir():
-                out += [(f, f"{user.name}_{f.name}") for f in la.glob("*.plist")]
+                out += [(f, f"{user.name}_LaunchAgents_{f.name}") for f in la.glob("*.plist")]
         out.append((r / "etc" / "crontab", None))
 
     elif cat == "shell":
@@ -104,7 +106,7 @@ def _enumerate(root: Path, cat: str) -> list[tuple[Path, str | None]]:
                 out.append((f, None))
         out += [(p, None) for p in sorted(base.glob("system.log.*"))]
 
-    return [(p, rn) for p, rn in out if p.exists()]
+    return utils.con_companeros([(p, rn) for p, rn in out if p.exists()])
 
 
 def _collect_unified_log(dest_dir: Path, manifest: list, days: int = 3) -> None:
@@ -188,7 +190,10 @@ def _parse_persistence(d: Path) -> tuple[list[dict], str | None]:
         args = pl.get("ProgramArguments")
         prog = " ".join(args) if isinstance(args, list) else (pl.get("Program") or "")
         run_at_load = pl.get("RunAtLoad", False)
-        user_agent = "LaunchAgents" in str(f) and "/Users/" in str(f)
+        # En la carpeta del caso: "<usuario>_LaunchAgents_x.plist" es de un
+        # usuario; "LaunchAgents_x.plist" y "LaunchDaemons_x.plist", del sistema.
+        # (Antes se buscaba "/Users/" en la ruta de la COPIA, que nunca lo tiene.)
+        user_agent = "_LaunchAgents_" in f.name and not f.name.startswith(("LaunchAgents_", "LaunchDaemons_"))
         suspicious = bool(_SUSPICIOUS_PATH.search(prog))
         sev = "crit" if suspicious else ("warn" if user_agent else "info")
         recs.append({"timestamp": ts, "kind": "launchd",
