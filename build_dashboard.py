@@ -6,7 +6,8 @@ from pathlib import Path
 TEMPLATE = r"""<!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DFIR · carlosvillalbalagos.com</title>
+<link rel="icon" type="image/x-icon" href="casos/huella-dactilar.png">
+<title>DFIR · BlueShield-Ch4rl13</title>
 <style>
 :root{
   --bg:#0A0E13; --panel:#12171F; --panel2:#171E28; --line:#232C38;
@@ -122,7 +123,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 26px;border-top:1px solid 
 </style></head>
 <body>
 <header>
-  <div class="brand"><span class="logo">&#9679; DFIR</span><span class="sub">carlosvillalbalagos.com</span></div>
+  <div class="brand"><span class="logo">&#9679; DFIR</span></div>
   <span class="tlp">TLP:CLEAR</span>
   <span class="sp"></span>
   <button class="btn hidden" id="btn-back" onclick="backToLanding()">&larr; Nuevo an&aacute;lisis</button>
@@ -220,7 +221,7 @@ function heroHTML(rep,a,host,integ){
         <div><div class="k">Equipo</div><div class="v">${esc(host.hostname||"?")} &middot; ${esc(host.os||"")}</div></div>
         <div><div class="k">Analista</div><div class="v">${esc((rep.case||{}).examiner||"&mdash;")}</div></div>
         <div><div class="k">Generado</div><div class="v">${fmtTs(rep.generated_utc)}</div></div>
-        <div><div class="k">Integridad</div><div class="v">${ent(integ.artifacts_hashed)}/${ent(integ.artifacts_total)} con hash</div></div>
+        <div><div class="k">Integridad</div><div class="v">${integ.artifacts_verified!==undefined ? ent(integ.artifacts_verified)+'/'+ent(integ.artifacts_copied)+' idénticas al original' : ent(integ.artifacts_hashed)+'/'+ent(integ.artifacts_total)+' con hash (sin comparar con el original)'}</div></div>
         <div><div class="k">Confianza (${esc(a.confidence_tier||"?")})</div><div class="conf-bar"><span style="width:${num(a.confidence)}%"></span></div></div>
       </div>
     </div></div>`;

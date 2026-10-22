@@ -7,22 +7,26 @@ Recolector y analizador de artefactos forenses **multiplataforma** (Windows, Lin
 ## Capacidades
 
 - **Triage multi-SO** con detección automática del anfitrión o `--target-os` (útil para analizar una imagen montada de otro SO).
-- **Imaging forense** de discos/SSD (RAW y E01) con hashes y verificación bit a bit.
+- **Imaging forense** de discos/SSD (RAW y E01) con hashes calculados al leer, verificación de la imagen escrita y, con `--reread-source`, relectura completa del origen. Un sector dañado se relee sector a sector: solo los 512 bytes ilegibles van a ceros.
 - **Super-timeline unificada**: fusiona todos los artefactos en un único eje temporal.
 - **Hallazgos automáticos** por SO (anti-forense, persistencia, cuentas backdoor, malware…).
 - **Extracción de IOCs** (IPs, dominios, URLs, hashes) en formato compatible con pipelines de CTI.
-- **Cadena de custodia** con MD5 + SHA-256 y método de adquisición por fichero.
+- **Cadena de custodia**: SHA-256 del original **y** de la copia (se anota si coinciden), MD5, método y tamaño por fichero; `manifest.json.sha256` y, con `FTRIAGE_MANIFEST_KEY`, un HMAC del manifiesto.
+- **Datos volátiles primero** (RFC 3227): en triage en vivo, procesos, conexiones, ARP, DNS y sesiones antes que los ficheros. La memoria RAM completa queda fuera: se vuelca antes con AVML (Linux) o WinPmem (Windows).
+- **El equipo del informe es el investigado**: nombre y SO salen de la evidencia (colmenas, `/etc/hostname`, `SystemVersion.plist`), no de la estación del analista, que va aparte.
 - **Tolerancia a fallos**: un artefacto ilegible se registra y el análisis continúa.
 
 ## Artefactos por sistema operativo
 
 | Windows | Linux | macOS |
 |---|---|---|
+| Volátiles en vivo (netstat, tasklist, ARP, DNS, sesiones) | Volátiles en vivo (ss, ps, ip, who, lsmod) | Volátiles en vivo (lsof, ps, netstat, ifconfig) |
 | Event logs (.evtx) | auth.log / secure / syslog | Unified log (`log show`) + system.log |
 | Prefetch | journald (`journalctl`) | LaunchDaemons / LaunchAgents (persistencia) |
 | Amcache (SHA-1) | wtmp / btmp (accesos y fallos) | Historial navegador (Safari/Chrome/Firefox) |
 | Shimcache (AppCompatCache) | Historial de shell (bash/zsh) | Quarantine (descargas) |
-| Historial navegador (Chrome/Edge/Firefox) | Persistencia (cron, systemd, authorized_keys, ld.so.preload) | Historial de shell (zsh/bash) |
+| Historial navegador (Chrome/Edge/Firefox) con `-wal` | Persistencia (cron, systemd, authorized_keys, ld.so.preload) | Historial de shell (zsh/bash) |
+| Registro: SYSTEM, SOFTWARE, SAM, SECURITY, NTUSER.DAT y UsrClass.dat de cada usuario, con `.LOG1`/`.LOG2` | | |
 | | Cuentas (/etc/passwd, sudoers) | Cuentas locales (dslocal) |
 | | Historial navegador | cron |
 
@@ -42,19 +46,21 @@ Opcional: [EZ Tools](https://ericzimmerman.github.io/) (prefetch) y `libewf`/`ew
 
 ## Uso — triage
 
+`--output` es obligatorio y tiene que estar en **otro volumen** que el investigado (un USB de evidencias o un recurso de red): escribir en el propio disco sobrescribe espacio libre y metadatos que son evidencia. Si no, la herramienta se niega (`--allow-same-volume` lo fuerza a sabiendas).
+
 ```bash
 # Detecta el SO del propio equipo (ejecutar como administrador/root)
-python triage.py triage --case IR-2026-014 --examiner "C. Villalba"
+python triage.py triage --case IR-2026-014 --examiner "C. Villalba" --output E:\IR-2026-014
 
 # Forzar el SO objetivo (p. ej. imagen Windows montada, analizada desde Linux)
-python triage.py triage --target-os windows --root /mnt/imagen --case IR-2026-014
+python triage.py triage --target-os windows --root /mnt/imagen --case IR-2026-014 --output /casos/IR-2026-014
 
 # Triage de un equipo Linux o macOS
-sudo python triage.py triage --target-os linux --case IR-2026-014
-sudo python triage.py triage --target-os macos --case IR-2026-014
+sudo python triage.py triage --target-os linux --case IR-2026-014 --output /media/usb/IR-2026-014
+sudo python triage.py triage --target-os macos --case IR-2026-014 --output /Volumes/USB/IR-2026-014
 
 # Adquisición Windows con instantánea de volumen
-python triage.py triage --vss --case IR-2026-014
+python triage.py triage --vss --case IR-2026-014 --output E:\IR-2026-014
 
 # Reanalizar una carpeta ya recolectada, sin volver a copiar
 python triage.py triage --parse-only ./triage_HOST_20260714
@@ -72,7 +78,7 @@ sudo python triage.py image --source /dev/sdb --output ./caso --case IR-2026-014
 sudo python triage.py image --source /dev/sdb --output ./caso --format e01 --case IR-2026-014
 ```
 
-La imagen se acompaña de un `.info.txt`/`.info.json` estilo dc3dd/Guymager con MD5+SHA256, tamaño, duración y **resultado de verificación** (relee la imagen y compara con el origen). Directamente cargable en Autopsy como "Disk Image". La fuente se abre en solo lectura; **en un caso real, usa siempre un write-blocker hardware**.
+La imagen se acompaña de un `.info.txt`/`.info.json` estilo dc3dd/Guymager con MD5+SHA256, tamaño, duración y **resultado de verificación**: relee la imagen escrita y la compara con los hashes calculados al leer el origen. Con `--reread-source` además vuelve a leer el origen entero y compara (prueba que no cambió durante la adquisición; tarda el doble). Directamente cargable en Autopsy como "Disk Image". La fuente se abre en solo lectura; **en un caso real, usa siempre un write-blocker hardware**.
 
 ## Salida
 
@@ -82,12 +88,21 @@ triage_<host>_<fecha>/
 ├── report.json          # informe estructurado completo
 ├── timeline.ndjson      # una observación por línea → SIEM (Splunk/Elastic/Sentinel)
 ├── iocs.json / iocs.csv # indicadores extraídos (defangueados) → compatible con News CTI
-├── manifest.json        # cadena de custodia: MD5+SHA256, método y tamaño por fichero
+├── manifest.json        # cadena de custodia: SHA-256 del original y de la copia, método y tamaño
+├── manifest.json.sha256 # hash del manifiesto (y .hmac con FTRIAGE_MANIFEST_KEY)
+├── target.json          # equipo investigado, leído de la evidencia
 ├── triage.log
 └── artifacts/           # copia cruda de todos los artefactos (evidencia)
 ```
 
 - **Imagen de disco → Autopsy / X-Ways / FTK.** **Timeline NDJSON → SIEM.** Son destinos distintos y la herramienta produce ambos.
+
+## Cómo está probado
+
+`pytest` en el CI (`.github/workflows/ci.yml`), sobre raíces falsas de Windows, Linux y macOS en un directorio temporal:
+los NTUSER.DAT de varios usuarios no se pisan y llevan sus `.LOG1`; los `.plist` con el mismo nombre en LaunchDaemons y LaunchAgents se conservan los dos; el `-wal` de SQLite se copia; `lastlog` disperso se omite; una copia que no coincide con el original queda marcada; el equipo del informe sale de la evidencia; sin `--output` en otro volumen no se recolecta; un sector dañado solo pone a cero sus 512 bytes; y la relectura del origen coincide.
+
+Lo que **no** cubre el CI: triage en vivo real de Windows o macOS, VSS, PECmd ni `ewfacquire`. Los casos de `casos/` son datos de demostración, no salidas de un equipo real.
 
 ## Arquitectura
 
