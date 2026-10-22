@@ -11,11 +11,12 @@ Uso exclusivamente defensivo (respuesta a incidentes). Dos subcomandos:
            con MD5+SHA256 y verificación, lista para Autopsy/X-Ways/FTK.
 
 Ejemplos:
-  # Triage del equipo vivo (ejecutar como administrador/root)
-  python triage.py triage --case IR-2026-014 --examiner "C. Villalba"
+  # Triage del equipo vivo (como administrador/root), a un USB de evidencias:
+  # la salida nunca va al disco que se investiga
+  python triage.py triage --case IR-2026-014 --examiner "C. Villalba" --output E:\\IR-2026-014
 
   # Adquisición limpia con instantánea de volumen
-  python triage.py triage --case IR-2026-014 --vss
+  python triage.py triage --case IR-2026-014 --vss --output E:\\IR-2026-014
 
   # Reanalizar una carpeta ya recolectada
   python triage.py triage --parse-only .\\triage_DESKTOP_20260714
@@ -31,10 +32,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
-from ftriage import __version__, imaging, iocs, platforms, reporting, utils
+import hashlib
+import hmac
+import os
+
+from ftriage import __version__, imaging, iocs, objetivo, platforms, reporting, utils, volatiles
 from ftriage.utils import log
 
 
@@ -59,7 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--case", default="SIN-CASO", help="Identificador del caso")
     t.add_argument("--examiner", default="", help="Nombre del analista")
     t.add_argument("--desc", default="", help="Descripción breve del análisis (se muestra bajo el nombre del caso)")
-    t.add_argument("--output", type=Path, help="Carpeta de salida")
+    t.add_argument("--output", type=Path,
+                   help="Carpeta de salida, en OTRO volumen que el investigado (obligatoria al recolectar)")
+    t.add_argument("--allow-same-volume", action="store_true",
+                   help="Permitir escribir en el mismo volumen que --root (contamina la evidencia)")
+    t.add_argument("--no-volatiles", action="store_true",
+                   help="En vivo, no recoger procesos/red/sesiones antes que los ficheros")
     t.add_argument("--root", type=Path, default=Path("C:\\") if utils.IS_WINDOWS else Path("/"),
                    help="Raíz del sistema (letra de una imagen montada para triage en frío)")
     t.add_argument("--target-os", default="auto", help="SO a triar: windows, linux, macos o auto (por defecto)")
@@ -84,6 +93,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Dividir RAW en segmentos (p. ej. 2G, 650M)")
     im.add_argument("--block-size", type=_size_arg, default=1 << 20, help="Tamaño de bloque")
     im.add_argument("--no-verify", action="store_true", help="No verificar la imagen tras adquirir")
+    im.add_argument("--reread-source", action="store_true",
+                    help="Releer también el ORIGEN tras adquirir y comparar sus hashes (verificación completa)")
     im.add_argument("--verbose", "-v", action="store_true", help="Log detallado")
     return p
 
@@ -107,15 +118,23 @@ def cmd_triage(args) -> int:
         mp = out_dir / "manifest.json"
         manifest = json.loads(mp.read_text(encoding="utf-8")) if mp.is_file() else []
     else:
-        host = utils.host_info()["hostname"] or "host"
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        out_dir = args.output or Path(f"triage_{host}_{stamp}")
+        host_os = platforms.detect_host()
+        target = platforms.normalize(args.target_os)
+        en_vivo = objetivo.es_en_vivo(args.root, target, host_os)
+        if args.output is None:
+            print("error: indica --output en un volumen distinto del investigado (un USB de "
+                  "evidencias o un recurso de red). Escribir en el propio disco sobrescribe "
+                  "espacio libre y metadatos que forman parte de la evidencia.", file=sys.stderr)
+            return 2
+        out_dir = args.output
+        if _mismo_volumen(out_dir, args.root) and not args.allow_same_volume:
+            print(f"error: {out_dir} está en el mismo volumen que {args.root}. Usa otro volumen "
+                  "o, a sabiendas, --allow-same-volume.", file=sys.stderr)
+            return 2
         out_dir.mkdir(parents=True, exist_ok=True)
         utils.setup_logging(out_dir / "triage.log", args.verbose)
         log.info("ftriage %s · caso %s · objetivo: %s", __version__, args.case, plat.LABEL)
         log.info("Salida: %s", out_dir.resolve())
-        host_os = platforms.detect_host()
-        target = platforms.normalize(args.target_os)
         if target != host_os and str(args.root) in ("/", "C:\\"):
             log.warning("Triando %s desde un host %s: apunta --root a la imagen montada", target, host_os)
         elif target == "windows" and utils.IS_WINDOWS and not utils.is_admin():
@@ -123,10 +142,19 @@ def cmd_triage(args) -> int:
         elif target in ("linux", "macos") and not utils.IS_WINDOWS and not utils.is_root():
             log.warning("Sin privilegios de root: algunos artefactos protegidos no se podrán copiar (usa sudo)")
         categories = _resolve_categories(args.artifacts, plat)
-        manifest = plat.collect(args.root, out_dir, categories, opts)
-        (out_dir / "manifest.json").write_text(
-            json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-        log.info("Cadena de custodia: manifest.json")
+        manifest = []
+        # RFC 3227: primero lo más volátil. Solo existe en el equipo vivo.
+        if en_vivo and not args.no_volatiles:
+            volatiles.recoger(target, out_dir, manifest)
+        elif not en_vivo:
+            log.info("Raíz %s montada: sin datos volátiles (no existen en una imagen)", args.root)
+        manifest += plat.collect(args.root, out_dir, categories, opts)
+        equipo = objetivo.describir(args.root, target, out_dir, en_vivo)
+        (out_dir / "target.json").write_text(json.dumps(equipo, indent=2, ensure_ascii=False), encoding="utf-8")
+        log.info("Equipo investigado: %s · %s (%s)", equipo.get("hostname"), equipo.get("os"), equipo.get("origen"))
+        _guardar_manifiesto(out_dir, manifest)
+        log.info("Cadena de custodia: manifest.json (+ manifest.json.sha256%s)",
+                 " y .hmac" if os.environ.get("FTRIAGE_MANIFEST_KEY") else "")
         if args.collect_only:
             log.info("Modo --collect-only: sin parseo")
             return 0
@@ -139,8 +167,10 @@ def cmd_triage(args) -> int:
         found = iocs.extract_iocs(parsed)
         ioc_summary = iocs.write_iocs(out_dir, found)
 
+    tj = out_dir / "target.json"
     case = {"name": args.case, "examiner": args.examiner, "os": plat.LABEL,
-            "description": args.desc, "generated_utc": utils.now_utc()}
+            "description": args.desc, "generated_utc": utils.now_utc(),
+            "host": json.loads(tj.read_text(encoding="utf-8")) if tj.is_file() else None}
     out = reporting.write_reports(out_dir, case, manifest, parsed, findings, found)
     _summary(out, ioc_summary)
     return 0
@@ -157,7 +187,7 @@ def cmd_image(args) -> int:
         result = imaging.image_device(
             args.source, out_dir, case, fmt=args.format,
             block_size=args.block_size, split_bytes=args.split,
-            verify=not args.no_verify)
+            verify=not args.no_verify, reread_source=args.reread_source)
     except (FileNotFoundError, PermissionError, OSError) as exc:
         log.error("Adquisición fallida: %s", exc)
         return 1
@@ -176,6 +206,34 @@ def cmd_image(args) -> int:
 
 
 # ================================================================= helpers
+def _mismo_volumen(salida: Path, raiz: Path) -> bool:
+    """True si la carpeta de salida está en el mismo sistema de ficheros que la raíz."""
+    p = salida.resolve()
+    while not p.exists() and p != p.parent:
+        p = p.parent
+    try:
+        return os.stat(p).st_dev == os.stat(raiz).st_dev
+    except OSError:
+        return False
+
+
+def _guardar_manifiesto(out_dir: Path, manifest: list[dict]) -> None:
+    """manifest.json + su SHA-256 y, con FTRIAGE_MANIFEST_KEY, un HMAC.
+
+    El .sha256 detecta un manifiesto dañado; solo el HMAC, con una clave que
+    tiene el analista y no está en la carpeta del caso, impide que alguien
+    edite el manifiesto y recalcule el hash.
+    """
+    datos = json.dumps(manifest, indent=2, ensure_ascii=False).encode("utf-8")
+    (out_dir / "manifest.json").write_bytes(datos)
+    (out_dir / "manifest.json.sha256").write_text(
+        f"{hashlib.sha256(datos).hexdigest()}  manifest.json\n", encoding="utf-8")
+    clave = os.environ.get("FTRIAGE_MANIFEST_KEY", "")
+    if clave:
+        firma = hmac.new(clave.encode("utf-8"), datos, hashlib.sha256).hexdigest()
+        (out_dir / "manifest.json.hmac").write_text(f"HMAC-SHA256 {firma}\n", encoding="utf-8")
+
+
 def _resolve_categories(value: str, plat) -> list[str]:
     cats = list(plat.CATEGORIES)
     if value.strip().lower() == "all":
