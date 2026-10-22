@@ -9,9 +9,7 @@
   "host": {
     "hostname": "MB-DESIGN-02",
     "os": "macOS 14.5 (Sonoma)",
-    "os_version": "#1 SMP PREEMPT_DYNAMIC @0",
-    "architecture": "x86_64",
-    "python": "3.12.3"
+    "origen": "caso de demostración"
   },
   "generated_utc": "2026-07-15T07:34:11Z",
   "assessment": {

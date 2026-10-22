@@ -1,7 +1,8 @@
-# Parseo de artefactos (Python puro, multiplataforma)
-python-evtx>=0.7.4      # event logs .evtx
-python-registry>=1.3.1  # hives del registro (amcache, shimcache)
-lxml>=4.9               # parseo XML de los eventos
+# Parseo de artefactos (Python puro, multiplataforma). Versiones fijadas:
+# lo que se ha probado es lo que se instala.
+python-evtx==0.8.1      # event logs .evtx
+python-registry==1.3.1  # hives del registro (amcache, shimcache, nombre del equipo)
+lxml==6.1.3             # parseo XML de los eventos
 
 # Prefetch: no requiere paquete. El parseo usa PECmd (Eric Zimmerman EZ Tools)
 # si está en el PATH o en --ez-tools; el formato comprimido de Windows 10
