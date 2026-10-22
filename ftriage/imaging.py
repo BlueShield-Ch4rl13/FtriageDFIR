@@ -34,6 +34,37 @@ from . import utils
 log = logging.getLogger("ftriage")
 
 BLKGETSIZE64 = 0x80081272  # ioctl Linux: tamaño del dispositivo de bloque en bytes
+SECTOR = 512                 # granularidad al releer un bloque con errores
+
+
+def _leer_bloque_con_errores(fd: int, offset: int, tam: int, bad: list) -> bytes:
+    """Relee un bloque que dio error sector a sector.
+
+    Antes, un solo sector malo rellenaba con ceros el bloque entero (1 MiB por
+    defecto): se perdían hasta 2047 sectores buenos por cada uno dañado. Ahora
+    solo los sectores ilegibles van a ceros y quedan anotados uno a uno.
+    """
+    partes = []
+    pos = offset
+    fin = offset + tam
+    while pos < fin:
+        try:
+            os.lseek(fd, pos, os.SEEK_SET)
+            dato = os.read(fd, min(SECTOR, fin - pos))
+        except OSError:
+            dato = None
+        if dato is None:
+            dato = b"\x00" * min(SECTOR, fin - pos)
+            if bad and bad[-1][1] == pos:          # agrupa sectores malos seguidos
+                bad[-1] = (bad[-1][0], pos + len(dato))
+            else:
+                bad.append((pos, pos + len(dato)))
+        elif not dato:                              # fin del dispositivo
+            break
+        partes.append(dato)
+        pos += len(dato)
+    os.lseek(fd, pos, os.SEEK_SET)
+    return b"".join(partes)
 
 
 def _device_size(fd: int, path: Path) -> int:
@@ -90,14 +121,12 @@ def acquire_raw(source: Path, image: Path, block_size: int = 1 << 20,
         while True:
             try:
                 chunk = os.read(src_fd, block_size)
-            except OSError as exc:  # sector defectuoso: rellenar con ceros y seguir
-                log.warning("Error de lectura en offset %d: %s (relleno con ceros)", offset, exc)
-                chunk = b"\x00" * block_size
-                bad_ranges.append((offset, offset + block_size))
-                try:
-                    os.lseek(src_fd, offset + block_size, os.SEEK_SET)
-                except OSError:
-                    break
+            except OSError as exc:  # sector defectuoso: releer sector a sector
+                log.warning("Error de lectura en el bloque de offset %d: %s (releo sector a sector)", offset, exc)
+                antes = len(bad_ranges)
+                chunk = _leer_bloque_con_errores(src_fd, offset, block_size, bad_ranges)
+                malos = sum(b - a for a, b in bad_ranges[antes:])
+                log.warning("  %d bytes ilegibles en ese bloque (a ceros); el resto, recuperado", malos)
             if not chunk:
                 break
             # Rotar segmento si toca
@@ -130,14 +159,43 @@ def acquire_raw(source: Path, image: Path, block_size: int = 1 << 20,
     return {
         "format": "raw", "bytes": total, "duration_s": round(elapsed, 1),
         "segments": [str(s) for s in segments], "hashes": digests,
-        "bad_sectors": len(bad_ranges), "bad_ranges": bad_ranges[:100],
+        "bad_sectors": sum((b - a) // SECTOR for a, b in bad_ranges),
+        "bad_ranges": bad_ranges[:100],
         "block_size": block_size, "split_bytes": split_bytes,
     }
 
 
+def hash_origen(source: Path, algos=("md5", "sha256"), block_size: int = 1 << 20) -> dict | None:
+    """Vuelve a leer el ORIGEN entero y devuelve sus hashes (None si no se puede)."""
+    hs = {a: hashlib.new(a) for a in algos}
+    try:
+        fd = os.open(source, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+    except OSError as exc:
+        log.warning("No se pudo releer el origen: %s", exc)
+        return None
+    try:
+        while True:
+            try:
+                block = os.read(fd, block_size)
+            except OSError:
+                return None          # con sectores dañados no hay un hash del origen que comparar
+            if not block:
+                break
+            for h in hs.values():
+                h.update(block)
+    finally:
+        os.close(fd)
+    return {a: h.hexdigest() for a, h in hs.items()}
+
+
 def verify_raw(segments: list[Path], expected: dict, algos=("md5", "sha256"),
                block_size: int = 1 << 20) -> dict:
-    """Relee la imagen escrita y comprueba que sus hashes coinciden con el origen."""
+    """Relee la imagen escrita y comprueba que sus hashes coinciden con los
+    calculados MIENTRAS se leía el origen.
+
+    Esto demuestra que la imagen en disco es lo que se leyó. No vuelve a leer
+    el origen: para eso está reread_source (hash_origen), que demuestra además
+    que el origen no cambió durante la adquisición."""
     hs = {a: hashlib.new(a) for a in algos}
     for seg in segments:
         with open(seg, "rb") as f:
@@ -228,9 +286,14 @@ def write_info(image: Path, source: Path, case: dict, acq: dict,
         if hashes.get(algo):
             lines.append(f"   {algo.upper():7}: {hashes[algo]}")
     if verify is not None:
-        lines += ["", f" VERIFICACIÓN    : {'OK - la imagen coincide con el origen' if verify.get('verified') else 'FALLÓ - los hashes NO coinciden'}"]
+        lines += ["", f" VERIFICACIÓN    : {'OK - la imagen coincide con lo leído del origen' if verify.get('verified') else 'FALLÓ - los hashes NO coinciden'}"]
         for algo, val in verify.get("image_hashes", {}).items():
             lines.append(f"   {algo.upper():7}(imagen): {val}")
+        if "source_reread" in verify:
+            r = verify["source_reread"]
+            estado = ("OK - el origen releído da los mismos hashes" if r.get("verified")
+                      else "NO COMPARABLE o DISTINTO - " + r.get("note", ""))
+            lines.append(f" RELECTURA ORIGEN: {estado}")
     lines += ["", " Generado por ftriage · uso exclusivamente para respuesta a incidentes.", "=" * 60, ""]
 
     txt = image.with_suffix(image.suffix + ".info.txt")
@@ -248,7 +311,8 @@ def write_info(image: Path, source: Path, case: dict, acq: dict,
 
 def image_device(source: Path, out_dir: Path, case: dict, fmt: str = "raw",
                  block_size: int = 1 << 20, split_bytes: int = 0,
-                 verify: bool = True, algos=("md5", "sha256")) -> dict:
+                 verify: bool = True, algos=("md5", "sha256"),
+                 reread_source: bool = False) -> dict:
     """Orquesta la adquisición completa: imagen + hashes + verificación + .info."""
     source = Path(source)
     if not source.exists():
@@ -275,6 +339,15 @@ def image_device(source: Path, out_dir: Path, case: dict, fmt: str = "raw",
     ver = None
     if verify:
         ver = verify_raw([Path(s) for s in acq["segments"]], acq["hashes"], algos, block_size)
+        if reread_source:
+            otra = hash_origen(source, algos, block_size)
+            if otra is None:
+                ver["source_reread"] = {"verified": False, "note": "no se pudo releer el origen entero (sectores dañados o acceso)"}
+            else:
+                igual = all(otra.get(a) == acq["hashes"].get(a) for a in algos)
+                ver["source_reread"] = {"verified": igual, "source_hashes": otra,
+                                        "note": "" if igual else "el origen cambió desde la adquisición (¿sin write-blocker?)"}
+            log.info("Relectura del origen: %s", "OK ✓" if ver["source_reread"]["verified"] else "NO ✗")
     write_info(image, source, case, acq, ver)
     return {**acq, "verification": ver}
 
