@@ -1,0 +1,12 @@
+# Actualizaciones de dependencias una vez al mes, agrupadas en un solo PR por
+# ecosistema. El CI (Linux, Windows y macOS) tiene que pasar antes de fusionar.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule: {interval: monthly}
+    groups: {python: {patterns: ["*"]}}
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: monthly}
+    groups: {actions: {patterns: ["*"]}}
