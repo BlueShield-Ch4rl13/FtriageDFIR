@@ -147,17 +147,37 @@ def build_findings(parsed: dict, manifest: list[dict]) -> list[dict]:
 
 
 # =================================================================== JSON
+def equipo(case: dict) -> dict:
+    """El equipo investigado. Si el caso no lo trae (informes antiguos), se dice
+    que es desconocido: nunca se rellena con la máquina del analista."""
+    return case.get("host") or {"hostname": "desconocido", "os": case.get("os", "—"),
+                                "origen": "no consta en el caso"}
+
+
+def integridad(manifest: list[dict]) -> dict:
+    """Copias cuyo hash coincide con el del original, no solo copias con hash."""
+    copiados = [m for m in manifest if m.get("status") == "ok"]
+    return {
+        "artifacts_total": len(manifest),
+        "artifacts_copied": len(copiados),
+        "artifacts_hashed": sum(1 for m in copiados if m.get("sha256")),
+        "artifacts_verified": sum(1 for m in copiados if m.get("verified")),
+        "artifacts_changed_during_copy": sum(1 for m in copiados if m.get("source_sha256")
+                                             and m.get("verified") is False),
+    }
+
+
 def write_json(out_dir: Path, case: dict, manifest: list[dict],
                parsed: dict, timeline: list[dict], findings: list[dict],
                assessment: dict | None = None, iocs: list[dict] | None = None) -> Path:
-    verified = sum(1 for m in manifest if m.get("sha256"))
     report = {
-        "case": case,
-        "host": utils.host_info(),
+        "case": {k: v for k, v in case.items() if k != "host"},
+        "host": equipo(case),
+        "examiner_station": utils.host_info(),
         "generated_utc": utils.now_utc(),
         "assessment": assessment or {},
         "iocs": iocs or [],
-        "integrity": {"artifacts_total": len(manifest), "artifacts_hashed": verified},
+        "integrity": integridad(manifest),
         "findings": findings,
         "chain_of_custody": manifest,
         "artifacts": {k: v for k, v in parsed.items() if k != "_errors"},
@@ -171,7 +191,7 @@ def write_json(out_dir: Path, case: dict, manifest: list[dict],
     # NDJSON: una observación por línea para el SIEM
     nd = out_dir / "timeline.ndjson"
     with open(nd, "w", encoding="utf-8") as f:
-        host = utils.host_info().get("hostname", "")
+        host = equipo(case).get("hostname", "")
         for row in timeline:
             f.write(json.dumps({**row, "host": host}, ensure_ascii=False) + "\n")
     log.info("Escritos report.json y timeline.ndjson (%d eventos)", len(timeline))
@@ -222,8 +242,8 @@ def _sev_badge(sev: str) -> str:
 def write_html(out_dir: Path, case: dict, manifest: list[dict],
                parsed: dict, timeline: list[dict], findings: list[dict],
                tl_limit: int = 1500, tbl_limit: int = 800) -> Path:
-    host = utils.host_info()
-    verified = sum(1 for m in manifest if m.get("sha256"))
+    host = equipo(case)
+    integ = integridad(manifest)
 
     # -- Timeline (hero) --
     tl_rows, tl_cls = [], []
@@ -361,7 +381,7 @@ def write_html(out_dir: Path, case: dict, manifest: list[dict],
         generated=_fmt_ts(utils.now_utc()),
         hostname=_esc(host["hostname"]), os=_esc(host["os"]),
         os_triado=_esc(case.get("os", "—")),
-        integrity=f"{verified}/{len(manifest)}",
+        integrity=f"{integ['artifacts_verified']}/{integ['artifacts_copied']}",
         tl_total=len(timeline), tl_shown=min(len(timeline), tl_limit),
         findings=findings_html, cards=cards, errors=errors_html,
         nav=nav, panels=panels, css=_CSS, js=_JS)
@@ -504,7 +524,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
     <span>Analista: <b>{examiner}</b></span>
     <span>Equipo: <span class="mono">{hostname}</span> · {os}</span>
     <span>Generado: <span class="mono">{generated} UTC</span></span>
-    <span>Integridad: <b>{integrity}</b> artefactos con hash</span>
+    <span>Integridad: <b>{integrity}</b> copias idénticas al original</span>
   </div>
 </header>
 <div class="layout">
