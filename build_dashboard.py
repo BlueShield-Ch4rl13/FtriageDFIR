@@ -171,7 +171,8 @@ const CAT_LABEL = {"eventlogs":"Eventos","prefetch":"Prefetch","amcache":"Amcach
 function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function fmtTs(t){return t?esc(t.replace("T"," ").replace("Z","")):"&mdash;";}
 function sevClass(s){return s==="crit"?"row-crit":s==="warn"?"row-warn":"";}
-function sevBadge(s){const l={crit:"cr&iacute;tico",warn:"atenci&oacute;n",info:"info"}[s]||s;return `<span class="sev sev-${s}">${l}</span>`;}
+// La severidad viene del report.json: solo valen las tres conocidas (un valor libre seria HTML del informe)
+function sevBadge(s){const L={crit:"cr&iacute;tico",warn:"atenci&oacute;n",info:"info"};if(!Object.prototype.hasOwnProperty.call(L,s))s="info";return `<span class="sev sev-${s}">${L[s]}</span>`;}
 function h(html){const d=document.createElement("div");d.innerHTML=html;return d.firstElementChild;}
 function safeColor(c){return (typeof c==="string"&&/^#[0-9a-fA-F]{3,8}$/.test(c))?c:"#8B97A5";}
 function safeAttack(a){return (typeof a==="string"&&/^T\d{4}(\.\d{3})?$/.test(a))?a:"";}
@@ -333,7 +334,7 @@ function buildCustody(coc){
     const md5=m.md5?`<span class="m hash" title="${esc(m.md5)}">${esc(m.md5.slice(0,12))}&hellip;</span>`:'<span class="muted">&mdash;</span>';
     const sha=m.sha256?`<span class="m hash" title="${esc(m.sha256)}">${esc(m.sha256.slice(0,16))}&hellip;</span>`:'<span class="muted">&mdash;</span>';
     return `<tr class="${ok?'':'row-crit'}"><td class="m">${esc(m.category)}</td><td class="m wrap">${esc(m.source)}</td>
-      <td class="m">${esc(m.method||"&mdash;")}</td><td>${md5}</td><td>${sha}</td>
+      <td class="m">${m.method?esc(m.method):"&mdash;"}</td><td>${md5}</td><td>${sha}</td>
       <td><span class="sev sev-${ok?'info':'crit'}">${esc(m.status)}</span></td></tr>`;}).join("");
   document.getElementById("p-coc").innerHTML=
     `<div class="muted" style="margin-bottom:10px">Cada artefacto con su MD5 y SHA-256 &mdash; verificable con otras herramientas.</div>
