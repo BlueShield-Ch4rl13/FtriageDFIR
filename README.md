@@ -102,6 +102,8 @@ triage_<host>_<fecha>/
 `pytest` en el CI (`.github/workflows/ci.yml`), sobre raíces falsas de Windows, Linux y macOS en un directorio temporal:
 los NTUSER.DAT de varios usuarios no se pisan y llevan sus `.LOG1`; los `.plist` con el mismo nombre en LaunchDaemons y LaunchAgents se conservan los dos; el `-wal` de SQLite se copia; `lastlog` disperso se omite; una copia que no coincide con el original queda marcada; el equipo del informe sale de la evidencia; sin `--output` en otro volumen no se recolecta; un sector dañado solo pone a cero sus 512 bytes; y la relectura del origen coincide.
 
+Además, **CodeQL** (`.github/workflows/codeql.yml`) busca fallos de seguridad en el Python, en el JavaScript del panel (`index.html`) y en los workflows, en cada PR y una vez por semana.
+
 Lo que **no** cubre el CI: triage en vivo real de Windows o macOS, VSS, PECmd ni `ewfacquire`. Los casos de `casos/` son datos de demostración, no salidas de un equipo real.
 
 ## Arquitectura
