@@ -147,7 +147,7 @@
     {
       "type": "ipv4",
       "value": "203.0.113.14",
-      "defanged": "91[.]219[.]236[.]14",
+      "defanged": "203[.]0[.]113[.]14",
       "count": 12,
       "private": false,
       "sources": [
@@ -157,7 +157,7 @@
     {
       "type": "domain",
       "value": "secure-docs-finance.example",
-      "defanged": "secure-docs-finance[.]top",
+      "defanged": "secure-docs-finance[.]example",
       "count": 1,
       "private": false,
       "sources": [
@@ -177,7 +177,7 @@
     {
       "type": "url",
       "value": "http://203.0.113.14/a.ps1",
-      "defanged": "hxxp://91[.]219[.]236[.]14/a[.]ps1",
+      "defanged": "hxxp://203[.]0[.]113[.]14/a[.]ps1",
       "count": 1,
       "private": false,
       "sources": [
@@ -187,7 +187,7 @@
     {
       "type": "url",
       "value": "http://secure-docs-finance.example/invoice.exe",
-      "defanged": "hxxp://secure-docs-finance[.]top/invoice[.]exe",
+      "defanged": "hxxp://secure-docs-finance[.]example/invoice[.]exe",
       "count": 1,
       "private": false,
       "sources": [

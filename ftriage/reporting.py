@@ -105,6 +105,19 @@ def build_timeline(parsed: dict) -> list[dict]:
     return tl
 
 
+def _enlaces_omitidos(manifest: list[dict]) -> list[dict]:
+    return [m for m in manifest if m.get("status") == "omitido" and "->" in str(m.get("error", ""))]
+
+
+def hallazgo_enlaces(enlaces: list[dict]) -> dict:
+    """Un enlace de usuario donde se esperaba un historial o una clave SSH no es
+    un error de la herramienta: es un hallazgo (vale para las tres plataformas)."""
+    return {"level": "crit", "text":
+            f"{len(enlaces)} artefacto(s) eran enlaces de un usuario del equipo y no se siguieron "
+            "(antiforense típico, T1070.003, o intento de colar otro fichero en el caso): "
+            + "; ".join(str(m["source"]) for m in enlaces[:3])}
+
+
 def build_findings(parsed: dict, manifest: list[dict]) -> list[dict]:
     """Hallazgos automáticos que orientan por dónde empezar a mirar."""
     findings: list[dict] = []
@@ -136,7 +149,10 @@ def build_findings(parsed: dict, manifest: list[dict]) -> list[dict]:
     if new_users:
         findings.append({"level": "warn", "text":
                          f"{new_users} cuenta(s) de usuario creada(s) (EID 4720)"})
-    failed_copy = sum(1 for m in manifest if m["status"] != "ok")
+    enlaces = _enlaces_omitidos(manifest)
+    if enlaces:
+        findings.append(hallazgo_enlaces(enlaces))
+    failed_copy = sum(1 for m in manifest if m["status"] not in ("ok",) and m not in enlaces)
     if failed_copy:
         findings.append({"level": "warn", "text":
                          f"{failed_copy} artefacto(s) no se pudieron adquirir (revisa la cadena de custodia)"})
@@ -562,6 +578,11 @@ def write_reports(out_dir: Path, case: dict, manifest: list[dict],
     timeline = build_timeline(parsed)
     if findings is None:
         findings = build_findings(parsed, manifest)
+    else:
+        enlaces = _enlaces_omitidos(manifest)
+        if enlaces:
+            findings = [hallazgo_enlaces(enlaces)] + [f for f in findings
+                                                      if "sin hallazgos" not in f.get("text", "").lower()]
     from . import assess as _assess
     assessment = _assess.assess(parsed, findings, manifest)
     json_path = write_json(out_dir, case, manifest, parsed, timeline, findings, assessment, iocs)

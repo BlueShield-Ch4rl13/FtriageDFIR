@@ -1,0 +1,17 @@
+# Lo que el Worker de dfir. NO publica: el panel es index.html + app.js + _headers
+# y el icono. El resto es la herramienta en Python (pública en GitHub de todas
+# formas, pero no pinta nada en el panel).
+.git
+.github
+.gitignore
+.assetsignore
+.pytest_cache
+.ruff_cache
+__pycache__
+*.py
+ftriage
+tests
+*.md
+*.txt
+LICENSE
+casos/*.json

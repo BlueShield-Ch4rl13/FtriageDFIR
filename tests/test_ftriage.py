@@ -175,3 +175,105 @@ def test_relectura_del_origen(tmp_path):
 ])
 def test_en_vivo(raiz, objetivo_os, anfitrion, esperado):
     assert objetivo.es_en_vivo(raiz, objetivo_os, anfitrion) is esperado
+
+
+# --------------------------------------- enlaces y ficheros especiales (A-02)
+# La recolección corre como root en un equipo comprometido: un usuario de ese
+# equipo no puede, con un enlace o un FIFO en su carpeta personal, meter
+# /etc/shadow en el caso, llenar el disco de evidencias ni colgar la recogida.
+# Los enlaces de las pruebas son del usuario que las ejecuta: se marca como no
+# de confianza para que la prueba sea la misma como root y sin root.
+posix = pytest.mark.skipif(os.name == "nt", reason="enlaces y FIFO de POSIX")
+
+
+@posix
+def test_un_enlace_de_usuario_a_un_secreto_no_se_copia(tmp_path, monkeypatch):
+    monkeypatch.setattr(utils, "UIDS_CONFIANZA", set())
+    secreto = escribir(tmp_path / "fuera" / "shadow", "root:$6$HASH-SECRETO:19000:0:99999:7:::\n")
+    historial = tmp_path / "raiz" / "home" / "jdoe" / ".bash_history"
+    historial.parent.mkdir(parents=True)
+    historial.symlink_to(secreto)
+    manifest: list = []
+    destino = tmp_path / "caso" / "artifacts" / "shell"
+    e = utils.copy_and_record("shell", historial, destino, manifest, "jdoe_bash_history")
+    assert e["status"] == "omitido" and str(secreto) in e["error"] and "antiforense" in e["note"]
+    assert not any(b"HASH-SECRETO" in p.read_bytes() for p in destino.rglob("*") if p.is_file())
+
+
+@posix
+def test_un_enlace_a_dev_zero_no_llena_el_disco(tmp_path, monkeypatch):
+    monkeypatch.setattr(utils, "UIDS_CONFIANZA", set())
+    historial = tmp_path / "home" / "jdoe" / ".bash_history"
+    historial.parent.mkdir(parents=True)
+    historial.symlink_to("/dev/zero")
+    e = utils.copy_and_record("shell", historial, tmp_path / "caso" / "artifacts" / "shell", [])
+    assert e["status"] == "omitido" and "/dev/zero" in e["error"]
+
+
+@posix
+def test_un_fifo_no_cuelga_la_recogida(tmp_path):
+    fifo = tmp_path / "home" / "jdoe" / ".bash_history"
+    fifo.parent.mkdir(parents=True)
+    os.mkfifo(fifo)
+    e = utils.copy_and_record("shell", fifo, tmp_path / "caso" / "artifacts" / "shell", [])
+    assert e["status"] == "omitido" and "fichero normal" in e["error"]
+
+
+@posix
+def test_un_enlace_de_confianza_se_sigue(tmp_path, monkeypatch):
+    monkeypatch.setattr(utils, "UIDS_CONFIANZA", {os.getuid()})   # como un enlace de root en /etc
+    real = escribir(tmp_path / "lib" / "ssh.service", "[Service]\nExecStart=/usr/sbin/sshd\n")
+    enlace = tmp_path / "etc" / "sshd.service"
+    enlace.parent.mkdir(parents=True)
+    enlace.symlink_to(real)
+    e = utils.copy_and_record("persistence", enlace, tmp_path / "caso" / "artifacts" / "persistence", [])
+    assert e["status"] == "ok" and e["verified"] is True
+
+
+def test_un_fichero_mayor_que_el_tope_no_se_copia(tmp_path, monkeypatch):
+    monkeypatch.setattr(utils, "MAX_ARTEFACTO", 1024)
+    grande = escribir(tmp_path / "var" / "log" / "auth.log", b"x" * 4096)
+    e = utils.copy_and_record("logs", grande, tmp_path / "caso" / "artifacts" / "logs", [])
+    assert e["status"] == "omitido" and "tope" in e["error"]
+
+
+@posix
+def test_triage_linux_con_historial_enlazado_no_filtra_el_secreto(tmp_path, monkeypatch):
+    monkeypatch.setattr(utils, "UIDS_CONFIANZA", set())
+    raiz = tmp_path / "raiz"
+    escribir(raiz / "etc" / "passwd", "root:x:0:0::/root:/bin/bash\njdoe:x:1000:1000::/home/jdoe:/bin/bash\n")
+    secreto = escribir(tmp_path / "fuera" / "shadow", "root:$6$HASH-SECRETO:19000::::::\n")
+    (raiz / "home" / "jdoe").mkdir(parents=True)
+    (raiz / "home" / "jdoe" / ".bash_history").symlink_to(secreto)
+    manifest = linux.collect(raiz, tmp_path / "caso", ["shell"])
+    entrada = next(m for m in manifest if m["source"].endswith(".bash_history"))
+    assert entrada["status"] == "omitido"
+    assert not any(b"HASH-SECRETO" in p.read_bytes() for p in (tmp_path / "caso").rglob("*") if p.is_file())
+
+
+@posix
+def test_el_enlace_omitido_sale_como_hallazgo(tmp_path, monkeypatch):
+    from ftriage import reporting
+    monkeypatch.setattr(utils, "UIDS_CONFIANZA", set())
+    h = tmp_path / "home" / "jdoe" / ".bash_history"
+    h.parent.mkdir(parents=True)
+    h.symlink_to("/dev/null")
+    manifest: list = []
+    utils.copy_and_record("shell", h, tmp_path / "caso" / "artifacts" / "shell", manifest)
+    textos = [f["text"] for f in reporting.build_findings({}, manifest) if f["level"] == "crit"]
+    assert any("T1070.003" in t and ".bash_history" in t for t in textos)
+
+
+@posix
+def test_el_hallazgo_del_enlace_tambien_sale_en_linux(tmp_path, monkeypatch):
+    monkeypatch.setattr(utils, "UIDS_CONFIANZA", set())
+    raiz = tmp_path / "raiz"
+    escribir(raiz / "etc" / "passwd", "root:x:0:0::/root:/bin/bash\n")
+    (raiz / "home" / "jdoe").mkdir(parents=True)
+    (raiz / "home" / "jdoe" / ".bash_history").symlink_to("/dev/null")
+    salida = tmp_path / "caso"
+    rc = triage.main(["triage", "--target-os", "linux", "--root", str(raiz), "--output", str(salida),
+                      "--case", "T", "--allow-same-volume", "--no-volatiles"])
+    informe = json.loads((salida / "report.json").read_text(encoding="utf-8"))
+    assert rc in (0, None)
+    assert any("T1070.003" in f["text"] for f in informe["findings"] if f["level"] == "crit")

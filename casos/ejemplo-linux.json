@@ -95,7 +95,7 @@
     {
       "type": "ipv4",
       "value": "203.0.113.14",
-      "defanged": "91[.]219[.]236[.]14",
+      "defanged": "203[.]0[.]113[.]14",
       "count": 8,
       "private": false,
       "sources": [
@@ -107,7 +107,7 @@
     {
       "type": "domain",
       "value": "evil-c2.example",
-      "defanged": "evil-c2[.]top",
+      "defanged": "evil-c2[.]example",
       "count": 1,
       "private": false,
       "sources": [
@@ -117,7 +117,7 @@
     {
       "type": "url",
       "value": "http://evil-c2.example/x.sh",
-      "defanged": "hxxp://evil-c2[.]top/x[.]sh",
+      "defanged": "hxxp://evil-c2[.]example/x[.]sh",
       "count": 1,
       "private": false,
       "sources": [

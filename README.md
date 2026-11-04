@@ -100,9 +100,11 @@ triage_<host>_<fecha>/
 ## Cómo está probado
 
 `pytest` en el CI (`.github/workflows/ci.yml`), sobre raíces falsas de Windows, Linux y macOS en un directorio temporal:
-los NTUSER.DAT de varios usuarios no se pisan y llevan sus `.LOG1`; los `.plist` con el mismo nombre en LaunchDaemons y LaunchAgents se conservan los dos; el `-wal` de SQLite se copia; `lastlog` disperso se omite; una copia que no coincide con el original queda marcada; el equipo del informe sale de la evidencia; sin `--output` en otro volumen no se recolecta; un sector dañado solo pone a cero sus 512 bytes; y la relectura del origen coincide.
+los NTUSER.DAT de varios usuarios no se pisan y llevan sus `.LOG1`; los `.plist` con el mismo nombre en LaunchDaemons y LaunchAgents se conservan los dos; el `-wal` de SQLite se copia; `lastlog` disperso se omite; una copia que no coincide con el original queda marcada; el equipo del informe sale de la evidencia; sin `--output` en otro volumen no se recolecta; un sector dañado solo pone a cero sus 512 bytes; la relectura del origen coincide; y en un equipo comprometido un enlace de un usuario (`~/.bash_history → /etc/shadow` o `→ /dev/zero`), un FIFO o un fichero que pasa del tope no se copia ni se lee: queda en la cadena de custodia como `omitido`, con el destino del enlace, y sale como hallazgo crítico (antiforense, T1070.003).
 
-Además, **CodeQL** (`.github/workflows/codeql.yml`) busca fallos de seguridad en el Python, en el JavaScript del panel (`index.html`) y en los workflows, en cada PR y una vez por semana.
+**Recogida en un equipo comprometido.** La herramienta corre como root o administrador en un equipo que se da por comprometido, y muchas rutas (historiales, `authorized_keys`, perfiles de navegador, LaunchAgents) las controla cualquier usuario de ese equipo. Por eso solo se siguen enlaces de root (en Windows, ningún enlace ni unión de directorios), solo se copian ficheros normales, se abre sin seguir el enlace final comprobando que es el mismo fichero que se revisó, y cada artefacto tiene un tope de tamaño (4 GB; `FTRIAGE_MAX_ARTEFACTO_MB` para cambiarlo).
+
+Además, **CodeQL** (`.github/workflows/codeql.yml`) busca fallos de seguridad en el Python, en el JavaScript del panel (`app.js`, que la CSP de dfir. solo deja cargar del propio origen: sin `unsafe-inline`) y en los workflows, en cada PR y una vez por semana.
 
 Lo que **no** cubre el CI: triage en vivo real de Windows o macOS, VSS, PECmd ni `ewfacquire`. Los casos de `casos/` son datos de demostración, no salidas de un equipo real.
 
