@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Genera el index.html autocontenido del dashboard DFIR e inyecta un caso demo."""
+"""Genera el index.html y el app.js del dashboard DFIR e inyecta los casos demo.
+
+Uso: python build_dashboard.py casos/ejemplo-windows.json casos/ejemplo-linux.json casos/ejemplo-macos.json index.html"""
 import json, sys
 from pathlib import Path
 
@@ -126,10 +128,10 @@ footer{color:var(--muted);font-size:12px;padding:20px 26px;border-top:1px solid 
   <div class="brand"><span class="logo">&#9679; DFIR</span></div>
   <span class="tlp">TLP:CLEAR</span>
   <span class="sp"></span>
-  <button class="btn hidden" id="btn-back" onclick="backToLanding()">&larr; Nuevo an&aacute;lisis</button>
-  <button class="btn hidden" id="btn-json" onclick="exportJSON()">Descargar JSON</button>
-  <button class="btn hidden" id="btn-pdf" onclick="window.print()">Guardar PDF</button>
-  <button class="btn primary" onclick="document.getElementById('fi').click()">Cargar report.json</button>
+  <button class="btn hidden" id="btn-back">&larr; Nuevo an&aacute;lisis</button>
+  <button class="btn hidden" id="btn-json">Descargar JSON</button>
+  <button class="btn hidden" id="btn-pdf">Guardar PDF</button>
+  <button class="btn primary" id="btn-cargar">Cargar report.json</button>
 </header>
 <main>
   <section id="landing">
@@ -137,15 +139,15 @@ footer{color:var(--muted);font-size:12px;padding:20px 26px;border-top:1px solid 
     <p class="lead">Sube el <span class="mono">report.json</span> generado por el agente <b>ftriage</b> en el equipo
     analizado (Windows, Linux o macOS) y obt&eacute;n el veredicto de compromiso, el mapeo a MITRE ATT&amp;CK,
     la timeline unificada y todos los artefactos.</p>
-    <div class="drop" id="drop" onclick="document.getElementById('fi').click()">
+    <div class="drop" id="drop">
       <div class="big">Arrastra aqu&iacute; un report.json &mdash; o pulsa para elegirlo</div>
       <div class="muted" style="margin-top:8px">Todo el an&aacute;lisis ocurre en tu navegador. Ning&uacute;n dato se sube a ning&uacute;n servidor.</div>
     </div>
     <div class="examples">
       <span class="ex-label">O explora un caso de ejemplo:</span>
-      <button class="btn ex" onclick="loadExample('windows')">&#9679; Windows &mdash; intrusi&oacute;n</button>
-      <button class="btn ex" onclick="loadExample('linux')">&#9679; Linux &mdash; rootkit</button>
-      <button class="btn ex" onclick="loadExample('macos')">&#9679; macOS &mdash; persistencia</button>
+      <button class="btn ex" data-ejemplo="windows">&#9679; Windows &mdash; intrusi&oacute;n</button>
+      <button class="btn ex" data-ejemplo="linux">&#9679; Linux &mdash; rootkit</button>
+      <button class="btn ex" data-ejemplo="macos">&#9679; macOS &mdash; persistencia</button>
     </div>
     <div class="explain">
       <div class="step"><b>1 &middot; Recolectar</b><div>Ejecuta <span class="mono">ftriage triage</span> en el equipo (como admin/root). Recolecta artefactos a nivel de sistema y calcula hashes.</div></div>
@@ -158,8 +160,12 @@ footer{color:var(--muted);font-size:12px;padding:20px 26px;border-top:1px solid 
 </main>
 <footer>DFIR &middot; carlosvillalbalagos.com &mdash; capa de an&aacute;lisis sobre el agente ftriage &middot; uso exclusivamente para respuesta a incidentes.</footer>
 <input type="file" id="fi" accept=".json,application/json" class="hidden">
-<script>
-const DEMO_CASES = {"windows":__DEMO_WINDOWS__,"linux":__DEMO_LINUX__,"macos":__DEMO_MACOS__};
+<script type="application/json" id="casos-demo">{"windows":__DEMO_WINDOWS__,"linux":__DEMO_LINUX__,"macos":__DEMO_MACOS__}</script>
+<script src="app.js"></script>
+</body></html>"""
+
+APP_JS = r"""// Los casos de ejemplo van en index.html como bloque de datos (no ejecutable)
+const DEMO_CASES = JSON.parse(document.getElementById("casos-demo").textContent);
 
 const SRC_COLOR = {"Evento":"#6EA8FE","Prefetch":"#E0A34A","Amcache":"#A6E22E","Shimcache":"#C77DFF",
   "Navegador":"#4DD0C4","Accesos":"#6EA8FE","Logs":"#E0A34A","Journal":"#4DD0C4","Shell":"#A6E22E",
@@ -220,7 +226,7 @@ function heroHTML(rep,a,host,integ){
       <div class="vtext">${esc(a.verdict_text||"")}</div>
       <div class="facts">
         <div><div class="k">Equipo</div><div class="v">${esc(host.hostname||"?")} &middot; ${esc(host.os||"")}</div></div>
-        <div><div class="k">Analista</div><div class="v">${esc((rep.case||{}).examiner||"&mdash;")}</div></div>
+        <div><div class="k">Analista</div><div class="v">${((rep.case||{}).examiner?esc(rep.case.examiner):"&mdash;")}</div></div>
         <div><div class="k">Generado</div><div class="v">${fmtTs(rep.generated_utc)}</div></div>
         <div><div class="k">Integridad</div><div class="v">${integ.artifacts_verified!==undefined ? ent(integ.artifacts_verified)+'/'+ent(integ.artifacts_copied)+' idénticas al original' : ent(integ.artifacts_hashed)+'/'+ent(integ.artifacts_total)+' con hash (sin comparar con el original)'}</div></div>
         <div><div class="k">Confianza (${esc(a.confidence_tier||"?")})</div><div class="conf-bar"><span style="width:${num(a.confidence)}%"></span></div></div>
@@ -375,16 +381,27 @@ const drop=document.getElementById("drop");
 ["dragenter","dragover"].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(drop)drop.classList.add("over");}));
 ["dragleave","drop"].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(drop)drop.classList.remove("over");}));
 document.addEventListener("drop",e=>{if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
-</script>
-</body></html>"""
+
+// Botones: sin onclick= en el HTML, para que la CSP no necesite 'unsafe-inline'
+document.getElementById("btn-back").addEventListener("click", backToLanding);
+document.getElementById("btn-json").addEventListener("click", exportJSON);
+document.getElementById("btn-pdf").addEventListener("click", () => window.print());
+document.getElementById("btn-cargar").addEventListener("click", () => document.getElementById("fi").click());
+document.getElementById("drop").addEventListener("click", () => document.getElementById("fi").click());
+document.querySelectorAll("[data-ejemplo]").forEach(b => b.addEventListener("click", () => loadExample(b.dataset.ejemplo)));
+"""
 
 def _emb(p):
+    """JSON seguro dentro de <script type="application/json">: ningun "<" literal
+    (ni </script> ni <!-- pueden cerrar o alterar el bloque)."""
     d = json.loads(Path(p).read_text(encoding="utf-8"))
-    return json.dumps(d, ensure_ascii=False).replace("</", "<\\/").replace("\u2028", " ").replace("\u2029", " ")
+    return json.dumps(d, ensure_ascii=False).replace("<", "\\u003c").replace("\u2028", " ").replace("\u2029", " ")
 
 html = (TEMPLATE
         .replace("__DEMO_WINDOWS__", _emb(sys.argv[1]))
         .replace("__DEMO_LINUX__", _emb(sys.argv[2]))
         .replace("__DEMO_MACOS__", _emb(sys.argv[3])))
 out = Path(sys.argv[4]); out.write_text(html, encoding="utf-8")
-print(f"Dashboard escrito: {out} ({len(html)//1024} KB)")
+# El JavaScript va aparte, junto a index.html: la CSP de dfir. solo permite scripts del propio origen
+(out.parent / "app.js").write_text(APP_JS, encoding="utf-8")
+print(f"Dashboard escrito: {out} ({len(html)//1024} KB) y {out.parent / 'app.js'}")

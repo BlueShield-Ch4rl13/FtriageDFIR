@@ -69,7 +69,7 @@
     {
       "type": "domain",
       "value": "evil-c2.example",
-      "defanged": "evil-c2[.]top",
+      "defanged": "evil-c2[.]example",
       "count": 3,
       "private": false,
       "sources": [
@@ -81,7 +81,7 @@
     {
       "type": "ipv4",
       "value": "203.0.113.14",
-      "defanged": "91[.]219[.]236[.]14",
+      "defanged": "203[.]0[.]113[.]14",
       "count": 2,
       "private": false,
       "sources": [
@@ -92,7 +92,7 @@
     {
       "type": "url",
       "value": "http://evil-c2.example/x",
-      "defanged": "hxxp://evil-c2[.]top/x",
+      "defanged": "hxxp://evil-c2[.]example/x",
       "count": 1,
       "private": false,
       "sources": [
@@ -102,7 +102,7 @@
     {
       "type": "url",
       "value": "http://evil-c2.example/panel",
-      "defanged": "hxxp://evil-c2[.]top/panel",
+      "defanged": "hxxp://evil-c2[.]example/panel",
       "count": 1,
       "private": false,
       "sources": [
@@ -112,7 +112,7 @@
     {
       "type": "url",
       "value": "http://evil-c2.example/invoice.dmg",
-      "defanged": "hxxp://evil-c2[.]top/invoice[.]dmg",
+      "defanged": "hxxp://evil-c2[.]example/invoice[.]dmg",
       "count": 1,
       "private": false,
       "sources": [

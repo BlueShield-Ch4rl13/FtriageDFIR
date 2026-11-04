@@ -8,11 +8,13 @@ mantiene bloqueados (hives del registro, bases de datos de navegador abiertas).
 from __future__ import annotations
 
 import ctypes
+import errno
 import hashlib
 import logging
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -126,6 +128,107 @@ def unix_to_iso(ts: float | None) -> str | None:
 
 
 # --------------------------------------------------------------- copia
+# La recolección corre como root/administrador en un equipo que se da por
+# comprometido, y muchas rutas (~/.bash_history, ~/.ssh/authorized_keys, los
+# historiales del navegador...) las controla cualquier usuario de ese equipo. Un
+# enlace simbólico suyo podía hacer que se copiara /etc/shadow dentro del caso
+# (y de ahí al informe, al SIEM y a ResponseLab) o, apuntando a /dev/zero o a
+# un FIFO, llenar el disco de evidencias o colgar la recolección.
+# Tope por artefacto: un registro o un .evtx grande cabe de sobra.
+MAX_ARTEFACTO = int(os.environ.get("FTRIAGE_MAX_ARTEFACTO_MB", "4096")) * 1024 * 1024
+# Dueños de los enlaces que se siguen: root. Un enlace de otro usuario se
+# registra en la cadena de custodia, con su destino, y no se sigue.
+UIDS_CONFIANZA = {0}
+REPARSE_SYMLINK, REPARSE_UNION = 0xA000000C, 0xA0000003   # IO_REPARSE_TAG_SYMLINK / _MOUNT_POINT
+
+
+class OrigenNoSeguro(Exception):
+    """El artefacto no se copia: se deja constancia del motivo en la custodia."""
+
+
+def comprobar_origen(src: Path) -> tuple[Path, os.stat_result]:
+    """La ruta real que se puede copiar y su stat, o OrigenNoSeguro.
+
+    - Ningún enlace del camino puede ser de un usuario del equipo (en Windows,
+      ningún enlace ni unión de directorios).
+    - Lo que se copia tiene que ser un fichero normal: ni dispositivo, ni FIFO,
+      ni socket.
+    - Y no más grande que MAX_ARTEFACTO.
+    """
+    try:
+        os.lstat(src)
+    except OSError as exc:
+        raise OrigenNoSeguro(f"no se puede leer: {exc}") from None
+    parte = Path(src.anchor or "/")
+    for componente in src.parts[1:]:
+        parte = parte / componente
+        try:
+            l = os.lstat(parte)
+        except OSError:
+            break
+        if IS_WINDOWS:
+            # Enlace simbólico o unión de directorios (mklink /J no pide administrador)
+            enlazado = getattr(l, "st_reparse_tag", 0) in (REPARSE_SYMLINK, REPARSE_UNION)
+            de_confianza = False
+        else:
+            enlazado = stat.S_ISLNK(l.st_mode)
+            de_confianza = l.st_uid in UIDS_CONFIANZA
+        if enlazado and not de_confianza:
+            try:
+                destino = os.readlink(parte)
+            except OSError:
+                destino = "?"
+            quien = "en Windows no se sigue ninguno" if IS_WINDOWS else f"de un usuario del equipo (uid {l.st_uid})"
+            raise OrigenNoSeguro(f"enlace {quien}: {parte} -> {destino}")
+    real = Path(os.path.realpath(src))
+    try:
+        st = os.stat(real)
+    except OSError as exc:
+        raise OrigenNoSeguro(f"no se puede leer: {exc}") from None
+    if not stat.S_ISREG(st.st_mode):
+        raise OrigenNoSeguro("no es un fichero normal (dispositivo, FIFO, socket o directorio)")
+    if st.st_size > MAX_ARTEFACTO:
+        raise OrigenNoSeguro(f"pesa {human_size(st.st_size)}, más que el tope de {human_size(MAX_ARTEFACTO)} "
+                             "(FTRIAGE_MAX_ARTEFACTO_MB)")
+    return real, st
+
+
+def _abrir_regular(ruta: Path, esperado: os.stat_result | None = None) -> int:
+    """Abre sin seguir un enlace final y comprueba que sigue siendo el fichero
+    normal que se revisó: alguien pudo cambiarlo entre la comprobación y la copia."""
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
+    try:
+        fd = os.open(ruta, flags)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:      # alguien lo cambió por un enlace tras comprobarlo
+            raise OrigenNoSeguro("el fichero se cambió por un enlace durante la recogida") from None
+        raise                             # bloqueado o sin permiso: sigue la escalera (robocopy)
+    st = os.fstat(fd)
+    if not stat.S_ISREG(st.st_mode) or (
+            esperado is not None and not IS_WINDOWS
+            and (st.st_dev, st.st_ino) != (esperado.st_dev, esperado.st_ino)):
+        os.close(fd)
+        raise OrigenNoSeguro("el fichero cambió entre la comprobación y la copia")
+    return fd
+
+
+def _copia_directa(ruta: Path, destino: Path, esperado: os.stat_result | None = None) -> None:
+    """Copia con tope: aunque el origen crezca o cambie durante la copia, nunca
+    se escriben más de MAX_ARTEFACTO bytes."""
+    fd = _abrir_regular(ruta, esperado)
+    copiado = 0
+    with os.fdopen(fd, "rb") as f, open(destino, "wb") as out:
+        for bloque in iter(lambda: f.read(1 << 20), b""):
+            copiado += len(bloque)
+            if copiado > MAX_ARTEFACTO:
+                raise OrigenNoSeguro("supera el tope durante la copia")
+            out.write(bloque)
+    try:
+        shutil.copystat(ruta, destino, follow_symlinks=False)
+    except OSError:
+        pass
+
+
 def _robocopy(src: Path, dst_dir: Path) -> bool:
     """Copia un único fichero en modo backup (/b), que con privilegios de
     administrador sortea el bloqueo exclusivo de los ficheros de sistema.
@@ -160,6 +263,7 @@ def copy_artifact(src: Path, dst_dir: Path, shadow: "ShadowCopy | None" = None,
     """
     dst_dir.mkdir(parents=True, exist_ok=True)
     destino = dst_dir / (dest_name or src.name)
+    comprobar_origen(src)   # OrigenNoSeguro sube a quien llama: se registra, no se copia
     # 1) Instantánea de volumen (la vía forense "limpia", opt-in con --vss)
     if shadow is not None:
         shadow_src = shadow.translate(src)
@@ -169,11 +273,17 @@ def copy_artifact(src: Path, dst_dir: Path, shadow: "ShadowCopy | None" = None,
                 return True, "vss"
             except OSError as exc:
                 log.debug("Copia VSS falló para %s: %s", src, exc)
-    # 2) Copia directa (suficiente para prefetch y ficheros no bloqueados)
+    # 2) Copia directa (suficiente para prefetch y ficheros no bloqueados), sin
+    #    seguir enlaces y con tope de tamaño (ver comprobar_origen)
     try:
-        shutil.copy2(src, destino)
+        real, st = comprobar_origen(src)
+        _copia_directa(real, destino, st)
         return True, "direct"
+    except OrigenNoSeguro:
+        destino.unlink(missing_ok=True)
+        raise
     except (PermissionError, OSError) as exc:
+        destino.unlink(missing_ok=True)
         log.debug("Copia directa falló para %s (%s); intento modo backup", src, exc)
     # 3) Modo backup (robocopy /b) para ficheros bloqueados por el sistema.
     #    robocopy copia con el nombre original: se renombra después.
@@ -455,15 +565,22 @@ def parse_utmp(path: Path, failed: bool = False) -> list[dict]:
 
 
 def hash_file(path: Path, algos=("md5", "sha256"), chunk: int = 1 << 20) -> dict:
-    """Calcula varios hashes en una sola pasada (cadena de custodia)."""
+    """Calcula varios hashes en una sola pasada (cadena de custodia).
+
+    Sin seguir un enlace final y con el mismo tope que la copia: hashear el
+    original también es leerlo, y un /dev/zero no se acaba nunca."""
     hs = {a: hashlib.new(a) for a in algos}
     try:
-        with open(path, "rb") as f:
+        leido = 0
+        with os.fdopen(_abrir_regular(path), "rb") as f:
             for block in iter(lambda: f.read(chunk), b""):
+                leido += len(block)
+                if leido > MAX_ARTEFACTO:
+                    raise OSError("supera el tope de tamaño")
                 for h in hs.values():
                     h.update(block)
         return {a: h.hexdigest() for a, h in hs.items()}
-    except OSError as exc:
+    except (OSError, OrigenNoSeguro) as exc:
         log.warning("No se pudo hashear %s: %s", path, exc)
         return {a: None for a in algos}
 
@@ -483,7 +600,11 @@ def copy_and_record(category: str, src: Path, dest_dir: Path, manifest: list,
     try:
         dest_dir.mkdir(parents=True, exist_ok=True)
         nombre = nombre_libre(dest_dir, rename or src.name)
+        # Antes de leer nada: ni el hash del original sigue un enlace de usuario
+        real, _ = comprobar_origen(src)
         origen = shadow.translate(src) if shadow is not None else None
+        if origen is None and real != src:
+            origen = real
         antes = hash_file(origen or src, ("sha256",)).get("sha256")
         ok, method = copy_artifact(src, dest_dir, shadow, dest_name=nombre)
         dest = dest_dir / nombre
@@ -502,6 +623,13 @@ def copy_and_record(category: str, src: Path, dest_dir: Path, manifest: list,
         else:
             entry["status"] = "failed"
             entry["error"] = "no se pudo copiar (¿permisos? ejecuta como root/administrador, o --vss)"
+    except OrigenNoSeguro as exc:
+        # No es un fallo de la herramienta: es un hallazgo. Un historial enlazado a
+        # /dev/null es antiforense clásico (T1070.003).
+        entry["status"] = "omitido"
+        entry["error"] = str(exc)
+        if "->" in str(exc):
+            entry["note"] = "posible antiforense o intento de exfiltración: revisa el destino del enlace"
     except Exception as exc:
         entry["status"] = "error"
         entry["error"] = f"{type(exc).__name__}: {exc}"
