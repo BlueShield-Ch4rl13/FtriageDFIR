@@ -25,10 +25,10 @@ def test_index_html_es_lo_que_genera_build_dashboard(tmp_path):
 def test_sin_javascript_en_linea_y_csp_sin_unsafe_inline():
     """La CSP de dfir. no permite scripts en linea: ni <script> con codigo ni on...= en el HTML."""
     html = (RAIZ / "index.html").read_text(encoding="utf-8")
-    scripts = re.findall(r"<script([^>]*)>(.*?)</script>", html, re.S)
+    scripts = re.findall(r"<script\b([^>]*)>(.*?)</script\s*>", html, re.S | re.I)
     for atributos, cuerpo in scripts:
         assert 'src="app.js"' in atributos or 'type="application/json"' in atributos, atributos
-    assert not re.search(r"\son[a-z]+\s*=", html), "manejador en linea en index.html"
+    assert not re.search(r"\son[a-z]+\s*=", html, re.I), "manejador en linea en index.html"
     csp = next(l for l in (RAIZ / "_headers").read_text(encoding="utf-8").splitlines() if "Content-Security-Policy" in l)
     script_src = re.search(r"script-src([^;]*)", csp).group(1)
     assert "unsafe-inline" not in script_src and "unsafe-eval" not in script_src

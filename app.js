@@ -13,6 +13,8 @@ function fmtTs(t){return t?esc(t.replace("T"," ").replace("Z","")):"&mdash;";}
 function sevClass(s){return s==="crit"?"row-crit":s==="warn"?"row-warn":"";}
 // La severidad viene del report.json: solo valen las tres conocidas (un valor libre seria HTML del informe)
 function sevBadge(s){const L={crit:"cr&iacute;tico",warn:"atenci&oacute;n",info:"info"};if(!Object.prototype.hasOwnProperty.call(L,s))s="info";return `<span class="sev sev-${s}">${L[s]}</span>`;}
+function sevNodo(s){const L={crit:"cr\u00edtico",warn:"atenci\u00f3n",info:"info"};if(!Object.prototype.hasOwnProperty.call(L,s))s="info";
+  const sp=document.createElement("span");sp.className="sev sev-"+s;sp.textContent=L[s];return sp;}
 function h(html){const d=document.createElement("div");d.innerHTML=html;return d.firstElementChild;}
 function safeColor(c){return (typeof c==="string"&&/^#[0-9a-fA-F]{3,8}$/.test(c))?c:"#8B97A5";}
 function safeAttack(a){return (typeof a==="string"&&/^T\d{4}(\.\d{3})?$/.test(a))?a:"";}
@@ -152,9 +154,21 @@ function drawArt(k){
     det:r.detail||r.title||r.channel||(r.details?Object.entries(r.details).map(([a,b])=>a+"="+b).join(" · "):"")||(r.sha1?("SHA1 "+r.sha1):"")||"",
     sev:r.severity||(["1102","104","1116","1117"].includes(r.event_id)?"crit":["4625","7045","4720","4104"].includes(r.event_id)?"warn":"info")
   });
-  document.querySelector("#art-tbl tbody").innerHTML=recs.slice(0,2000).map(r=>{const v=val(r);
-    return `<tr class="${sevClass(v.sev)}"><td class="m" style="white-space:nowrap">${fmtTs(v.ts)}</td>
-     <td class="m">${esc(v.kind)}</td><td class="m wrap">${esc(v.sum)}</td><td class="wrap">${esc(v.det)}</td><td>${sevBadge(v.sev)}</td></tr>`;}).join("");
+  // Hasta 2000 filas con datos del report.json: con nodos y textContent, sin
+  // pasar por HTML (lo que mas texto libre del equipo examinado lleva).
+  const tbody=document.querySelector("#art-tbl tbody");
+  tbody.textContent="";
+  const filas=document.createDocumentFragment();
+  for(const r of recs.slice(0,2000)){
+    const v=val(r), tr=document.createElement("tr"), cls=sevClass(v.sev);
+    if(cls) tr.className=cls;
+    const celda=(texto,clase)=>{const td=document.createElement("td");td.className=clase;td.textContent=texto==null?"":String(texto);tr.appendChild(td);return td;};
+    celda(v.ts?String(v.ts).replace("T"," ").replace("Z",""):"\u2014","m").style.whiteSpace="nowrap";
+    celda(v.kind,"m");celda(v.sum,"m wrap");celda(v.det,"wrap");
+    const td=document.createElement("td");td.appendChild(sevNodo(v.sev));tr.appendChild(td);
+    filas.appendChild(tr);
+  }
+  tbody.appendChild(filas);
 }
 
 /* ---- IOCs ---- */
