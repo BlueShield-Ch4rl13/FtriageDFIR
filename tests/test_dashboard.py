@@ -5,6 +5,7 @@ import ipaddress
 import re
 import subprocess
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -25,10 +26,25 @@ def test_index_html_es_lo_que_genera_build_dashboard(tmp_path):
 def test_sin_javascript_en_linea_y_csp_sin_unsafe_inline():
     """La CSP de dfir. no permite scripts en linea: ni <script> con codigo ni on...= en el HTML."""
     html = (RAIZ / "index.html").read_text(encoding="utf-8")
-    scripts = re.findall(r"<script\b([^>]*)>(.*?)</script\s*>", html, re.S | re.I)
-    for atributos, cuerpo in scripts:
-        assert 'src="app.js"' in atributos or 'type="application/json"' in atributos, atributos
-    assert not re.search(r"\son[a-z]+\s*=", html, re.I), "manejador en linea en index.html"
+    # Con el analizador de HTML, no con expresiones regulares: ve <SCRIPT>, </script >
+    # y atributos en cualquier orden igual que el navegador.
+    class Etiquetas(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.scripts, self.manejadores = [], []
+
+        def handle_starttag(self, tag, attrs):
+            atributos = dict(attrs)
+            if tag == "script":
+                self.scripts.append(atributos)
+            self.manejadores += [f"<{tag} {k}>" for k in atributos if k.startswith("on")]
+
+    etiquetas = Etiquetas()
+    etiquetas.feed(html)
+    assert etiquetas.scripts, "index.html sin <script>"
+    for atributos in etiquetas.scripts:
+        assert atributos.get("src") == "app.js" or atributos.get("type") == "application/json", atributos
+    assert not etiquetas.manejadores, f"manejadores en linea en index.html: {etiquetas.manejadores}"
     csp = next(l for l in (RAIZ / "_headers").read_text(encoding="utf-8").splitlines() if "Content-Security-Policy" in l)
     script_src = re.search(r"script-src([^;]*)", csp).group(1)
     assert "unsafe-inline" not in script_src and "unsafe-eval" not in script_src
